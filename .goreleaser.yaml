@@ -1,0 +1,63 @@
+# This is an example .goreleaser.yml file with sensible defaults.
+# Make sure to check the documentation at https://goreleaser.com
+
+# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
+# vim: set ts=2 sw=2 tw=0 fo=cnqoj
+
+version: 2
+
+before:
+  hooks:
+    - go mod tidy
+    - go generate ./...
+
+builds:
+  - id: server
+    main: ./cmd/server
+    binary: tcs
+    env: [ CGO_ENABLED=0 ]
+    goos:
+      - linux
+      - windows
+    goarch:
+      - arm64
+      - amd64
+    flags: [ -trimpath ]
+    ldflags: [ -s -w ]
+
+  - id: cert_gen
+    main: ./cmd/cert_gen
+    binary: cert_gen
+    env: [ CGO_ENABLED=0 ]
+    goos:
+      - linux
+      - windows
+    goarch:
+      - arm64
+      - amd64
+    flags: [ -trimpath ]
+    ldflags: [ -s -w ]
+
+archives:
+  - id: server_archive
+    ids: [server]
+    formats: [tar.gz]
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+
+  - id: cert_gen_archive
+    ids: [cert_gen]
+    formats: [tar.gz]
+    name_template: "cert_gen_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"

@@ -1,0 +1,10 @@
+/.venv
+/.idea
+/dist
+/from/
+
+/*.DS_Store
+
+/output/**
+# Added by goreleaser init:
+dist/
