@@ -2,16 +2,24 @@ module github.com/Shua-github/Tap-Cloud-Server
 
 go 1.24.5
 
-require github.com/nutsdb/nutsdb v1.0.4
+require (
+	github.com/glebarez/sqlite v1.11.0
+	golang.org/x/crypto v0.46.0
+	gorm.io/gorm v1.31.1
+)
 
 require (
-	github.com/antlabs/stl v0.0.1 // indirect
-	github.com/antlabs/timer v0.0.11 // indirect
-	github.com/bwmarrin/snowflake v0.3.0 // indirect
-	github.com/gofrs/flock v0.8.1 // indirect
-	github.com/pkg/errors v0.9.1 // indirect
-	github.com/tidwall/btree v1.6.0 // indirect
-	github.com/xujiajun/mmap-go v1.0.1 // indirect
-	github.com/xujiajun/utils v0.0.0-20220904132955-5f7c5b914235 // indirect
-	golang.org/x/sys v0.15.0 // indirect
+	github.com/dustin/go-humanize v1.0.1 // indirect
+	github.com/glebarez/go-sqlite v1.21.2 // indirect
+	github.com/google/uuid v1.3.0 // indirect
+	github.com/jinzhu/inflection v1.0.0 // indirect
+	github.com/jinzhu/now v1.1.5 // indirect
+	github.com/mattn/go-isatty v0.0.17 // indirect
+	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
+	golang.org/x/sys v0.39.0 // indirect
+	golang.org/x/text v0.32.0 // indirect
+	modernc.org/libc v1.22.5 // indirect
+	modernc.org/mathutil v1.5.0 // indirect
+	modernc.org/memory v1.5.0 // indirect
+	modernc.org/sqlite v1.23.1 // indirect
 )

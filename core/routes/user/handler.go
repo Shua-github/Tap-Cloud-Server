@@ -3,121 +3,110 @@ package user
 import (
 	"net/http"
 
+	"github.com/Shua-github/Tap-Cloud-Server/core/routes/custom"
 	"github.com/Shua-github/Tap-Cloud-Server/core/utils"
 )
 
-func RegisterRoutes(mux *http.ServeMux, db utils.Db) {
-	mux.HandleFunc("POST /1.1/users", func(w http.ResponseWriter, r *http.Request) { handleRegisterUser(db, w, r) })
-	mux.HandleFunc("PUT /1.1/users/{objectID}/refreshSessionToken", func(w http.ResponseWriter, r *http.Request) { handleRefreshSessionToken(db, w, r) })
-	mux.HandleFunc("GET /1.1/users/me", func(w http.ResponseWriter, r *http.Request) { handleGetCurrentUser(db, w, r) })
-	mux.HandleFunc("PUT /1.1/users/{objectID}", func(w http.ResponseWriter, r *http.Request) { handleUpdateUser(db, w, r) })
-	mux.HandleFunc("PUT /1.1/classes/_User/{objectID}", func(w http.ResponseWriter, r *http.Request) { handleUpdateUser(db, w, r) })
-	mux.HandleFunc("DELETE /1.1/users/{objectID}", func(w http.ResponseWriter, r *http.Request) { handleDeleteUser(db, w, r) })
-	mux.HandleFunc("DELETE /1.1/classes/_User/{objectID}", func(w http.ResponseWriter, r *http.Request) { handleDeleteUser(db, w, r) })
+func RegisterRoutes(mux *http.ServeMux, db *utils.Db, white_list bool) {
+	db.AutoMigrate(&Session{}, &User{})
+
+	mux.HandleFunc("POST /1.1/users", func(w http.ResponseWriter, r *http.Request) {
+		handleRegisterUser(white_list, db, w, r)
+	})
+	mux.HandleFunc("PUT /1.1/users/{objectID}/refreshSessionToken", func(w http.ResponseWriter, r *http.Request) {
+		handleRefreshSessionToken(db, w, r)
+	})
+	mux.HandleFunc("GET /1.1/users/me", func(w http.ResponseWriter, r *http.Request) {
+		handleGetCurrentUser(db, w, r)
+	})
+	mux.HandleFunc("PUT /1.1/users/{objectID}", func(w http.ResponseWriter, r *http.Request) {
+		handleUpdateUser(db, w, r)
+	})
+	mux.HandleFunc("DELETE /1.1/users/{objectID}", func(w http.ResponseWriter, r *http.Request) {
+		handleDeleteUser(db, w, r)
+	})
 }
 
-func handleRegisterUser(db utils.Db, w http.ResponseWriter, r *http.Request) {
-	var req RegisterUserRequest
+func handleRegisterUser(white_list bool, db *utils.Db, w http.ResponseWriter, r *http.Request) {
+	var req TapTapRegisterUserRequest
 	if err := utils.ReadJSON(r, &req); err != nil {
 		utils.WriteError(w, http.StatusBadRequest, "Invalid request body")
 		return
 	}
 
-	openID := req.AuthData.TapTap.OpenID
-
-	o2sTable := db.NewTable("openid2session")
-	if sessionTokenBytes, err := o2sTable.Get(openID); err == nil {
-		sessionToken := string(sessionTokenBytes)
-		session := utils.Bind(db.NewTable("session"), sessionToken, new(Session))
-		if err := session.Load(); err == nil {
-			utils.WriteJSON(w, http.StatusOK, session.V)
-			return
-		}
-		_ = o2sTable.Del(openID)
+	if req.AuthData.TapTap.OpenID == "" {
+		utils.WriteError(w, http.StatusBadRequest, "missing OpenID")
+		return
 	}
 
-	now := utils.GetUTCISO()
-	user := new(User)
-	user.ObjectID = utils.RandomObjectID()
-	user.OpenID = openID
-	user.Nickname = req.AuthData.TapTap.Name
-	user.CreatedAt = now
-	user.UpdatedAt = now
+	if white_list {
+		var wl custom.WhiteList
+		if err := db.Where("open_id = ?", req.AuthData.TapTap.OpenID).First(&wl).Error; err != nil {
+			utils.WriteError(w, http.StatusForbidden, "OpenID not in whitelist")
+			return
+		}
+	}
 
-	userBound := utils.Bind(db.NewTable("user"), user.ObjectID, user)
-	if err := userBound.Save(); err != nil {
+	var existing User
+	if err := db.Where("open_id = ?", req.AuthData.TapTap.OpenID).First(&existing).Error; err == nil {
+		var session Session
+		if err := db.Where("user_object_id = ?", existing.ObjectID).First(&session).Error; err == nil {
+			utils.WriteJSON(w, http.StatusOK, session.ToResp())
+			return
+		}
+	}
+
+	user := User{
+		ObjectID: utils.RandomObjectID(),
+		Nickname: req.AuthData.TapTap.Name,
+		OpenID:   req.AuthData.TapTap.OpenID,
+	}
+	if err := db.Create(&user).Error; err != nil {
 		utils.WriteError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
 	tk := utils.RandomObjectID()
-	session := utils.Bind(db.NewTable("session"), tk, new(Session))
-	session.V.SessionToken = tk
-	session.V.UserObjectID = user.ObjectID
-	session.V.CreatedAt = now
-
-	if err := session.Save(); err != nil {
+	session := Session{
+		SessionToken: tk,
+		UserObjectID: user.ObjectID,
+	}
+	if err := db.Create(&session).Error; err != nil {
 		utils.WriteError(w, http.StatusInternalServerError, "DB error")
 		return
 	}
 
-	if err := o2sTable.Put(openID, []byte(tk)); err != nil {
-		utils.WriteError(w, http.StatusInternalServerError, "Failed to save openid mapping")
-		return
-	}
-
-	utils.WriteJSON(w, http.StatusCreated, session.V)
+	utils.WriteJSON(w, http.StatusCreated, session.ToResp())
 }
 
-func handleRefreshSessionToken(db utils.Db, w http.ResponseWriter, r *http.Request) {
+func handleRefreshSessionToken(db *utils.Db, w http.ResponseWriter, r *http.Request) {
 	objectID := r.PathValue("objectID")
 
-	oldSession, err := GetSession(r, db)
+	Session, err := GetSession(r, db)
 	if err != nil {
 		utils.WriteError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	if err := oldSession.Load(); err != nil {
-		utils.WriteError(w, http.StatusUnauthorized, "Invalid session token")
-		return
-	}
 
-	if oldSession.V.UserObjectID != objectID {
+	if Session.UserObjectID != objectID {
 		utils.WriteError(w, http.StatusForbidden, "Session does not belong to this user")
 		return
 	}
 
-	user := utils.Bind(db.NewTable("user"), objectID, new(User))
-	if err := user.Load(); err != nil {
+	var user User
+	if err := db.Where("object_id = ?", objectID).First(&user).Error; err != nil {
 		utils.WriteError(w, http.StatusNotFound, "User not found")
 		return
 	}
 
-	newToken := utils.RandomObjectID()
-	now := utils.GetUTCISO()
+	Session.SessionToken = utils.RandomObjectID()
 
-	newSession := utils.Bind(db.NewTable("session"), newToken, new(Session))
-	newSession.V = oldSession.V
-	newSession.V.SessionToken = newToken
-	newSession.V.CreatedAt = now
-	if err := newSession.Save(); err != nil {
-		utils.WriteError(w, http.StatusInternalServerError, "DB error")
-		return
-	}
-	_ = oldSession.Delete()
-	o2sTable := db.NewTable("openid2session")
-	if err := o2sTable.Put(user.V.OpenID, []byte(newToken)); err != nil {
-		utils.WriteError(w, http.StatusInternalServerError, "Failed to update openid mapping")
-		return
-	}
-	utils.WriteJSON(w, http.StatusOK, RefreshSessionTokenResponse{
-		SessionToken: newToken,
-		ObjectID:     objectID,
-		CreatedAt:    newSession.V.CreatedAt,
-	})
+	db.Save(&Session)
+
+	utils.WriteJSON(w, http.StatusOK, Session.ToResp())
 }
 
-func handleDeleteUser(db utils.Db, w http.ResponseWriter, r *http.Request) {
+func handleDeleteUser(db *utils.Db, w http.ResponseWriter, r *http.Request) {
 	objectID := r.PathValue("objectID")
 
 	session, err := GetSession(r, db)
@@ -125,54 +114,37 @@ func handleDeleteUser(db utils.Db, w http.ResponseWriter, r *http.Request) {
 		utils.WriteError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	if err := session.Load(); err != nil {
-		utils.WriteError(w, http.StatusUnauthorized, "Invalid session token")
-		return
-	}
-
-	if session.V.UserObjectID != objectID {
+	if session.UserObjectID != objectID {
 		utils.WriteError(w, http.StatusForbidden, "Cannot delete other users")
 		return
 	}
 
-	user := utils.Bind(db.NewTable("user"), objectID, new(User))
-	if err := user.Load(); err != nil {
-		utils.WriteError(w, http.StatusNotFound, "User not found")
-		return
-	}
+	db.Delete(&session)
+	db.Where("object_id = ?", objectID).Delete(&User{})
 
-	o2sTable := db.NewTable("openid2session")
-	_ = o2sTable.Del(user.V.OpenID)
-
-	_ = session.Delete()
-
-	_ = user.Delete()
-
-	utils.LogResponse(http.StatusOK, "User deleted: "+objectID)
-
+	w.WriteHeader(http.StatusOK)
 }
 
-func handleGetCurrentUser(db utils.Db, w http.ResponseWriter, r *http.Request) {
-	session, err := GetSession(r, db)
+func handleGetCurrentUser(db *utils.Db, w http.ResponseWriter, r *http.Request) {
+	s, err := GetSession(r, db)
 	if err != nil {
 		utils.WriteError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	if err := session.Load(); err != nil {
-		utils.WriteError(w, http.StatusUnauthorized, "invalid session token")
-		return
-	}
 
-	um := utils.Bind(db.NewTable("user"), session.V.UserObjectID, new(User))
-	if err := um.Load(); err != nil {
+	var user User
+	if err := db.Where("object_id = ?", s.UserObjectID).First(&user).Error; err != nil {
 		utils.WriteError(w, http.StatusNotFound, "user not found")
 		return
 	}
-	user := um.V
-	utils.WriteJSON(w, http.StatusOK, GetCurrentUserResponse{ObjectID: user.ObjectID, Nickname: user.Nickname, CreatedAt: user.CreatedAt, UpdatedAt: user.UpdatedAt})
+
+	utils.WriteJSON(w, http.StatusOK, GetCurrentUserResponse{
+		ObjectID: user.ObjectID,
+		Nickname: user.Nickname,
+	})
 }
 
-func handleUpdateUser(db utils.Db, w http.ResponseWriter, r *http.Request) {
+func handleUpdateUser(db *utils.Db, w http.ResponseWriter, r *http.Request) {
 	objectID := r.PathValue("objectID")
 	var req UpdateUserRequest
 	if err := utils.ReadJSON(r, &req); err != nil {
@@ -180,15 +152,14 @@ func handleUpdateUser(db utils.Db, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	um := utils.Bind(db.NewTable("user"), objectID, new(User))
-	if err := um.Load(); err != nil {
+	var user User
+	if err := db.Where("object_id = ?", objectID).First(&user).Error; err != nil {
 		utils.WriteError(w, http.StatusNotFound, "user not found")
 		return
 	}
 
-	um.V.Nickname = req.Nickname
-	um.V.UpdatedAt = utils.GetUTCISO()
-	if err := um.Save(); err != nil {
+	user.Nickname = req.Nickname
+	if err := db.Save(&user).Error; err != nil {
 		utils.WriteError(w, http.StatusInternalServerError, "db error")
 		return
 	}

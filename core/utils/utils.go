@@ -6,7 +6,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"time"
 )
@@ -25,8 +24,8 @@ func RandomObjectID() string {
 	return string(b)
 }
 
-func GetUTCISO() string {
-	return time.Now().UTC().Format(time.RFC3339Nano)
+func FormatUTCISO(i time.Time) string {
+	return i.UTC().Format(time.RFC3339Nano)
 }
 
 func EncodeBase64Key(key string) string {
@@ -41,19 +40,11 @@ func DecodeBase64Key(encoded string) (string, error) {
 	return string(decoded), nil
 }
 
-func LogRequest(r *http.Request) {
-	log.Printf("[%s] %s %s", r.Method, r.URL.Path, r.URL.RawQuery)
-}
-
-func LogResponse(statusCode int, message string) {
-	log.Printf("Response: %d - %s", statusCode, message)
-}
-
 func GetSessionToken(r *http.Request) string {
 	return r.Header.Get("X-LC-Session")
 }
 
-func WriteJSON(w http.ResponseWriter, statusCode int, data interface{}) {
+func WriteJSON(w http.ResponseWriter, statusCode int, data any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
 	json.NewEncoder(w).Encode(data)

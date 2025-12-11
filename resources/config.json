@@ -1,0 +1,9 @@
+{
+  "bucket": "my-bucket",
+  "domain": "example.com",
+  "sign": {
+    "switch": true,
+    "key": "my-sign-key",
+    "ttl": "5m"
+  }
+}

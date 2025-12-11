@@ -1,6 +1,9 @@
 package file
 
-import "github.com/Shua-github/Tap-Cloud-Server/core/general"
+import (
+	"github.com/Shua-github/Tap-Cloud-Server/core/general"
+	"github.com/Shua-github/Tap-Cloud-Server/core/utils"
+)
 
 type FileTokenRequest struct {
 	Type     string           `json:"__type"`
@@ -10,18 +13,8 @@ type FileTokenRequest struct {
 	ACL      general.ACL      `json:"ACL"`
 }
 
-type UploadSessionRequest struct {
-	UploadID string `json:"uploadId"`
-	Key      string `json:"key"`
-}
-
 type UploadPartRequest struct {
-	Parts []PartInfo `json:"parts"`
-}
-
-type PartInfo struct {
-	PartNumber int    `json:"partNumber"`
-	Etag       string `json:"etag"`
+	Parts []utils.UploadedPart `json:"parts"`
 }
 
 type StartUploadResponse struct {

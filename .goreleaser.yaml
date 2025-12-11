@@ -19,9 +19,13 @@ builds:
     goos:
       - linux
       - windows
+      - android
     goarch:
       - arm64
       - amd64
+    ignore:
+      - goos: android
+        goarch: amd64
     flags: [ -trimpath ]
     ldflags: [ -s -w ]
 
@@ -46,6 +50,11 @@ archives:
     format_overrides:
       - goos: windows
         formats: [zip]
+    files:
+      - src: ./resources/config.json
+        strip_parent: true
+      - README.md
+      - LICENSE.txt
 
   - id: cert_gen_archive
     ids: [cert_gen]
