@@ -34,11 +34,16 @@ builds:
     binary: cert_gen
     env: [ CGO_ENABLED=0 ]
     goos:
-      - linux
       - windows
+      - android
     goarch:
       - arm64
       - amd64
+    ignore:
+      - goos: android
+        goarch: amd64
+      - goos: windows
+        goarch: arm64
     flags: [ -trimpath ]
     ldflags: [ -s -w ]
 
