@@ -6,11 +6,12 @@ import (
 	"net/url"
 	"strconv"
 
+	"github.com/Shua-github/Tap-Cloud-Server/core/model"
 	"github.com/Shua-github/Tap-Cloud-Server/core/utils"
+	"gorm.io/datatypes"
 )
 
 func RegisterRoutes(mux *http.ServeMux, db *utils.Db, bucket string, fb utils.FileBucket) {
-	db.AutoMigrate(&FileToken{})
 	mux.HandleFunc("POST /1.1/fileTokens", func(w http.ResponseWriter, r *http.Request) { handleCreateFileToken(db, bucket, w, r) })
 	mux.HandleFunc("DELETE /1.1/files/{ObjectID}", func(w http.ResponseWriter, r *http.Request) { handleDeleteFile(db, fb, w, r) })
 	mux.HandleFunc("GET /1.1/files/{ObjectID}", func(w http.ResponseWriter, r *http.Request) { handleGetFile(fb, w, r) })
@@ -40,11 +41,15 @@ func handleCreateFileToken(db *utils.Db, bucket string, w http.ResponseWriter, r
 		scheme = "http"
 	}
 
-	baseURL := url.URL{Scheme: scheme, Host: r.Host}
+	baseURL := url.URL{
+		Scheme: scheme,
+		Host:   r.Host,
+	}
 
-	fileURL := baseURL.String() + "/1.1/files/" + sharedID
+	fileURL := baseURL
+	fileURL.Path = "/1.1/files/" + sharedID
 
-	ft := new(FileToken)
+	ft := new(model.FileToken)
 
 	ft.Bucket = bucket
 	ft.Key = sharedID      // Key = ObjectID
@@ -53,7 +58,7 @@ func handleCreateFileToken(db *utils.Db, bucket string, w http.ResponseWriter, r
 	ft.Name = req.Name
 	ft.Token = fileToken
 	ft.UploadURL = baseURL.String()
-	ft.FileURL = fileURL
+	ft.FileURL = datatypes.URL(fileURL)
 	ft.ACL = req.ACL
 
 	if err := db.Create(&ft).Error; err != nil {
@@ -86,19 +91,17 @@ func handleGetFile(fb utils.FileBucket, w http.ResponseWriter, r *http.Request) 
 
 func handleDeleteFile(db *utils.Db, fb utils.FileBucket, w http.ResponseWriter, r *http.Request) {
 	objectID := r.PathValue("ObjectID")
+	var file model.FileToken
 
-	err := fb.Delete(objectID)
-	if err != nil {
-		utils.WriteError(w, http.StatusInternalServerError, err.Error())
+	if err := db.First(&file, "object_id = ?", objectID).Error; err != nil {
+		utils.ParseDbError(w, err)
 		return
 	}
-
-	if err := db.Where("object_id = ?", objectID).Delete(&FileToken{}).Error; err != nil {
-		utils.WriteError(w, http.StatusInternalServerError, "Failed to delete file token")
+	if err := file.Delete(db, fb); err != nil {
+		utils.ParseDbError(w, err)
 		return
 	}
-
-	utils.WriteJSON(w, http.StatusOK, map[string]any{})
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func handleFileCallback(w http.ResponseWriter, r *http.Request) {
@@ -108,7 +111,7 @@ func handleFileCallback(w http.ResponseWriter, r *http.Request) {
 func handleStartUpload(db *utils.Db, fb utils.FileBucket, w http.ResponseWriter, r *http.Request) {
 	key, _ := utils.DecodeBase64Key(r.PathValue("tokenKey"))
 
-	var ft FileToken
+	var ft model.FileToken
 	if err := db.Where("key = ?", key).First(&ft).Error; err != nil {
 		utils.WriteError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -118,11 +121,12 @@ func handleStartUpload(db *utils.Db, fb utils.FileBucket, w http.ResponseWriter,
 	if err != nil {
 		utils.WriteError(w, http.StatusInternalServerError, err.Error())
 		return
+
 	}
 
 	ft.Token = utils.RandomObjectID()
 	if err := db.Save(&ft).Error; err != nil {
-		utils.WriteError(w, http.StatusInternalServerError, err.Error())
+		utils.WriteError(w, http.StatusInternalServerError, "DB Error:"+err.Error())
 		return
 	}
 

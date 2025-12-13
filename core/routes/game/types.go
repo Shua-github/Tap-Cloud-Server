@@ -2,7 +2,7 @@ package game
 
 import (
 	"github.com/Shua-github/Tap-Cloud-Server/core/general"
-	"github.com/Shua-github/Tap-Cloud-Server/core/routes/file"
+	"github.com/Shua-github/Tap-Cloud-Server/core/model"
 )
 
 type GameSaveRequest struct {
@@ -29,12 +29,13 @@ type UpdateGameSaveResponse struct {
 
 type GameSaveCore struct {
 	Summary    string          `json:"summary"`
-	GameFile   file.FileToken  `json:"gameFile"`
+	GameFile   model.FileToken `json:"gameFile"`
 	User       general.Pointer `json:"user"`
 	ModifiedAt general.Date    `json:"modifiedAt"`
 	CreatedAt  string          `json:"createdAt"`
 	UpdatedAt  string          `json:"updatedAt"`
 	Name       string          `json:"name"`
+	ObjectID   string          `json:"objectId"`
 }
 
 type GameSaveResponse struct {

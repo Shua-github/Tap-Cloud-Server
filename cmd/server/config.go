@@ -5,20 +5,23 @@ import (
 	"fmt"
 	"os"
 	"time"
+
+	"github.com/Shua-github/Tap-Cloud-Server/core/utils"
 )
 
 type Config struct {
-	Bucket string     `json:"bucket"`
-	Domain string     `json:"domain"`
-	Cert   string     `json:"cert"`
-	Key    string     `json:"key"`
-	Sign   SignConfig `json:"sign"`
+	Bucket   string         `json:"bucket"`
+	Domain   string         `json:"domain"`
+	Cert     string         `json:"cert"`
+	Key      string         `json:"key"`
+	I18nText utils.I18nText `json:"i18n_text"`
+	Custom   CustomConfig   `json:"custom"`
 }
 
-type SignConfig struct {
-	Switch bool     `json:"switch"`
-	Key    string   `json:"key"`
-	TTL    Duration `json:"ttl"`
+type CustomConfig struct {
+	Switch         bool     `json:"switch"`
+	SignKey        string   `json:"sign_key"`
+	WebHookTimeOut Duration `json:"timeout"`
 }
 
 type Duration time.Duration

@@ -3,6 +3,7 @@
 import (
 	"net/http"
 
+	"github.com/Shua-github/Tap-Cloud-Server/core/model"
 	"github.com/Shua-github/Tap-Cloud-Server/core/routes/custom"
 	"github.com/Shua-github/Tap-Cloud-Server/core/routes/file"
 	"github.com/Shua-github/Tap-Cloud-Server/core/routes/game"
@@ -11,20 +12,24 @@ import (
 )
 
 type Handler struct {
+	Bucket        string
 	NewDb         utils.NewDb
 	NewFileBucket utils.NewFileBucket
-	Bucket        string
-	Sign          *utils.Sign
+	I18nText      *utils.I18nText
+	Custom        *utils.Custom
 }
 
-func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
+func (h *Handler) New() (mux *http.ServeMux, err error) {
+	mux = http.NewServeMux()
 	db := h.NewDb(h.Bucket)
 	fb := h.NewFileBucket(h.Bucket)
-	if h.Sign != nil {
-		custom.RegisterWhiteListRoute(mux, db, h.Sign)
+	if h.Custom != nil {
+		custom.RegisterWhiteListRoute(mux, db, h.Custom.Sign)
 	}
-
+	model.Init(db)
 	file.RegisterRoutes(mux, db, h.Bucket, fb)
-	user.RegisterRoutes(mux, db, h.Sign != nil)
-	game.RegisterRoutes(mux, db)
+	user.RegisterRoutes(mux, db, h.Custom, h.I18nText, fb)
+	game.RegisterRoutes(mux, db, h.Custom)
+
+	return
 }

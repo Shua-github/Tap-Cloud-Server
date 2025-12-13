@@ -1,11 +1,14 @@
-package file
+package model
 
 import (
 	"encoding/json"
+	"fmt"
 	"time"
 
 	"github.com/Shua-github/Tap-Cloud-Server/core/general"
 	"github.com/Shua-github/Tap-Cloud-Server/core/utils"
+	"gorm.io/datatypes"
+	"gorm.io/gorm"
 )
 
 type FileToken struct {
@@ -16,7 +19,7 @@ type FileToken struct {
 	ObjectID  string           `json:"objectId" gorm:"primarykey"`
 	Token     string           `json:"token"`
 	UploadURL string           `json:"upload_url"`
-	FileURL   string           `json:"url"`
+	FileURL   datatypes.URL    `json:"url"`
 	ACL       general.ACL      `gorm:"serializer:json" json:"ACL"`
 	CreatedAt time.Time        `json:"-"`
 	UpdatedAt time.Time        `json:"-"`
@@ -39,4 +42,26 @@ func (f FileToken) MarshalJSON() ([]byte, error) {
 		MimeType:  "application/octet-stream",
 		Alias:     (Alias)(f),
 	})
+}
+
+func (f *FileToken) Delete(db *gorm.DB, fb utils.FileBucket) error {
+	if err := fb.Delete(f.ObjectID); err != nil {
+		return fmt.Errorf("failed to delete file from bucket: %w", err)
+	}
+
+	if err := db.Delete(f).Error; err != nil {
+		return fmt.Errorf("failed to delete file token record: %w", err)
+	}
+
+	return nil
+}
+
+func GetFile(db *utils.Db, ObjectID string) (*FileToken, error) {
+	var ft FileToken
+
+	if err := db.Where("object_id = ?", ObjectID).First(&ft).Error; err != nil {
+		return nil, err
+	}
+
+	return &ft, nil
 }

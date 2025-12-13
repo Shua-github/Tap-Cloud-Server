@@ -1,6 +1,11 @@
 package custom
 
 type WhiteListRequest struct {
-	OpenID    string `json:"openid"`
-	Timestamp uint64 `json:"timestamp"`
+	Exp     uint64 `json:"exp"`
+	WebHook string `json:"webhook_url"`
+}
+
+type GetWhiteListResponse struct {
+	OpenID  string `json:"openid"`
+	WebHook string `json:"webhook_url"`
 }

@@ -13,20 +13,29 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	var sign *utils.Sign
-	if cfg.Sign.Switch {
-		sign = GetSign([]byte(cfg.Sign.Key), cfg.Sign.TTL.ToDuration())
+
+	var custom *utils.Custom
+	if cfg.Custom.Switch {
+		clinet := &http.Client{Timeout: cfg.Custom.WebHookTimeOut.ToDuration()}
+		if cfg.Custom.SignKey == "" {
+			panic("config miss Key")
+		}
+		sign := NewSign([]byte(cfg.Custom.SignKey))
+		custom = &utils.Custom{Sign: sign, Client: clinet}
 	}
 
 	handler := &core.Handler{
 		NewDb:         mustNewDb,
 		NewFileBucket: NewLocalFileBucket,
 		Bucket:        cfg.Bucket,
-		Sign:          sign,
+		Custom:        custom,
+		I18nText:      &cfg.I18nText,
 	}
 
-	mux := http.NewServeMux()
-	handler.RegisterRoutes(mux)
+	mux, err := handler.New()
+	if err != nil {
+		panic(err)
+	}
 
 	loggedMux := LoggingMiddleware(mux)
 

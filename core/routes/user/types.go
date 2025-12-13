@@ -17,8 +17,6 @@ type UpdateUserRequest struct {
 	Nickname string `json:"nickname"`
 }
 
-type UpdateUserResponse struct{}
-
 type GetCurrentUserResponse struct {
 	ObjectID  string `json:"objectId"`
 	Nickname  string `json:"nickname"`
@@ -28,7 +26,9 @@ type GetCurrentUserResponse struct {
 
 type SessionResponse struct {
 	SessionToken string `json:"sessionToken"`
-	UserObjectID string `json:"objectId"`
+	ObjectID     string `json:"objectId"`
 	CreatedAt    string `json:"createdAt"`
 	UpdatedAt    string `json:"updatedAt"`
+	Nickname     string `json:"nickname"`
+	ShortId      string `json:"shortId"`
 }

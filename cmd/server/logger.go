@@ -6,7 +6,16 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"unicode/utf8"
 )
+
+func tryDecode(b []byte) string {
+	if utf8.Valid(b) {
+		return string(b)
+	} else {
+		return ""
+	}
+}
 
 type loggingResponseWriter struct {
 	http.ResponseWriter
@@ -37,25 +46,17 @@ func LoggingMiddleware(next http.Handler) http.Handler {
 		}
 		next.ServeHTTP(lrw, r)
 		var logBuf bytes.Buffer
-		logBuf.WriteString("Path: " + r.URL.Path + "\n")
+		logBuf.WriteString("Path: " + r.URL.RequestURI() + "\n")
 		logBuf.WriteString("Method: " + r.Method + "\n")
 		logBuf.WriteString("RemoteAddr: " + r.RemoteAddr + "\n")
 		logBuf.WriteString("UserAgent: " + r.UserAgent() + "\n")
-		if len(reqData) <= 1024 {
-			logBuf.WriteString("Request Body: " + string(reqData) + "\n")
-		} else {
-			logBuf.WriteString("Request Body: [TOO LARGE]" + "\n")
-		}
+		logBuf.WriteString("Request Body: " + tryDecode(reqData) + "\n")
 		logBuf.WriteString("Response Status: ")
 		logBuf.WriteString(http.StatusText(lrw.statusCode))
 		logBuf.WriteString(" (" +
 			func(code int) string { return fmt.Sprintf("%d", code) }(lrw.statusCode) +
 			")\n")
-		if len(lrw.body) <= 1024 {
-			logBuf.WriteString("Response Body: " + string(lrw.body) + "\n")
-		} else {
-			logBuf.WriteString("Response Body: [TOO LARGE]\n")
-		}
+		logBuf.WriteString("Response Body: " + tryDecode(lrw.body) + "\n")
 		log.Print(logBuf.String())
 	})
 }

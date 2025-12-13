@@ -1,9 +1,12 @@
 {
   "bucket": "my-bucket",
   "domain": "example.com",
-  "sign": {
-    "switch": true,
-    "key": "my-sign-key",
-    "ttl": "5m"
+  "cert": "",
+  "key": "",
+  "i18n_text": {"openid_not_in_white_list":"You are not in whitelist!","server_name":"Tap-Cloud-Server"},
+  "custom": {
+    "switch": false,
+    "sign_key": "my-key",
+    "timeout": "1s"
   }
 }
