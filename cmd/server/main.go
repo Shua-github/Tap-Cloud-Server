@@ -32,12 +32,7 @@ func main() {
 		I18nText:      &cfg.I18nText,
 	}
 
-	mux, err := handler.New()
-	if err != nil {
-		panic(err)
-	}
-
-	loggedMux := LoggingMiddleware(mux)
+	loggedMux := LoggingMiddleware(handler.New())
 
 	serverAddr := "0.0.0.0:443"
 	log.Printf("Server running at https://%s\n", serverAddr)

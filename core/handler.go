@@ -19,7 +19,7 @@ type Handler struct {
 	Custom        *utils.Custom
 }
 
-func (h *Handler) New() (mux *http.ServeMux, err error) {
+func (h *Handler) New() (mux *http.ServeMux) {
 	mux = http.NewServeMux()
 	db := h.NewDb(h.Bucket)
 	fb := h.NewFileBucket(h.Bucket)

@@ -118,7 +118,7 @@ func handleDeleteUser(c *utils.Custom, db *utils.Db, fb utils.FileBucket, w http
 		return
 	}
 
-	model.DeleteAllGameSaves(db, fb, session.SessionToken)
+	model.DeleteAllGameSaves(db, fb, session.ObjectID)
 	db.Delete(&session)
 
 	if c != nil {

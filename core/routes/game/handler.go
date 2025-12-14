@@ -32,7 +32,7 @@ func handleCreateGameSave(c *utils.Custom, db *utils.Db, w http.ResponseWriter, 
 	game_save := model.GameSave{
 		Summary:          req.Summary,
 		GameFileObjectID: req.GameFile.ObjectID,
-		SessionToken:     session.SessionToken,
+		UserObjectID:     session.ObjectID,
 		ModifiedAt:       req.ModifiedAt,
 		Name:             req.Name,
 		ObjectID:         utils.RandomObjectID(),
@@ -46,10 +46,6 @@ func handleCreateGameSave(c *utils.Custom, db *utils.Db, w http.ResponseWriter, 
 	if c != nil {
 		var wl model.WhiteList
 		if err := db.First(&wl, "open_id = ?", session.OpenID).Error; err != nil {
-			utils.ParseDbError(w, err)
-			return
-		}
-		if err := db.First(&game_save, "object_id = ?", game_save.ObjectID).Error; err != nil {
 			utils.ParseDbError(w, err)
 			return
 		}
@@ -78,7 +74,7 @@ func handleGetGameSaves(db *utils.Db, w http.ResponseWriter, r *http.Request) {
 	var game_save model.GameSave
 	var resp GameSaveResponse
 	if session, err = user.GetSession(r, db); err == nil {
-		if err = db.First(&game_save, "session_token = ?", session.SessionToken).Error; err == nil {
+		if err = db.First(&game_save, "user_object_id = ?", session.ObjectID).Error; err == nil {
 			ft, err := model.GetFile(db, game_save.GameFileObjectID)
 			if err != nil {
 				utils.ParseDbError(w, err)
@@ -128,7 +124,7 @@ func handleUpdateGameSave(c *utils.Custom, db *utils.Db, w http.ResponseWriter, 
 
 	if c != nil {
 		var session model.Session
-		if err := db.First(&session, "session_token", game_save.SessionToken).Error; err != nil {
+		if err := db.First(&session, "object_id = ?", game_save.UserObjectID).Error; err != nil {
 			utils.ParseDbError(w, err)
 			return
 		}
