@@ -95,12 +95,12 @@ func handleRefreshSessionToken(c *utils.Custom, db *utils.Db, w http.ResponseWri
 			utils.ParseDbError(w, err)
 			return
 		}
-		if wl.WebHook != nil {
+		if wl.WebHook.String() != "" {
 			c.SendWebHook(&utils.HookResponse{
 				Meta: utils.HookMeta{Type: "user", Action: "refresh_session_token"},
 				User: oldSession.ToHookUser(),
 				Data: session.ToHookUser(),
-			}, url.URL(*wl.WebHook))
+			}, url.URL(wl.WebHook))
 		}
 	}
 
@@ -129,12 +129,12 @@ func handleDeleteUser(c *utils.Custom, db *utils.Db, fb utils.FileBucket, w http
 			utils.ParseDbError(w, err)
 			return
 		}
-		if wl.WebHook != nil {
+		if wl.WebHook.String() != "" {
 			c.SendWebHook(&utils.HookResponse{
 				Meta: utils.HookMeta{Type: "user", Action: "delete"},
 				User: session.ToHookUser(),
 				Data: nil,
-			}, url.URL(*wl.WebHook))
+			}, url.URL(wl.WebHook))
 		}
 	}
 
@@ -176,12 +176,12 @@ func handleUpdateUser(c *utils.Custom, db *utils.Db, w http.ResponseWriter, r *h
 			utils.ParseDbError(w, err)
 			return
 		}
-		if wl.WebHook != nil {
+		if wl.WebHook.String() != "" {
 			c.SendWebHook(&utils.HookResponse{
 				Meta: utils.HookMeta{Type: "user", Action: "update"},
 				User: session.ToHookUser(),
 				Data: HookData{session.Nickname},
-			}, url.URL(*wl.WebHook))
+			}, url.URL(wl.WebHook))
 		}
 	}
 

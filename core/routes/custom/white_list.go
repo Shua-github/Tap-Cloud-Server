@@ -47,15 +47,14 @@ func RegisterWhiteListRoute(mux *http.ServeMux, db *utils.Db, sign utils.Sign) {
 
 		switch r.Method {
 		case http.MethodPost:
-			var webhookURL *datatypes.URL
+			var webhookURL datatypes.URL
 			if req.WebHook != "" {
 				webhook, err := url.Parse(req.WebHook)
 				if err != nil {
 					utils.WriteError(w, http.StatusBadRequest, "webhook is invalid")
 					return
 				}
-				tmp := datatypes.URL(*webhook)
-				webhookURL = &tmp
+				webhookURL = datatypes.URL(*webhook)
 			}
 
 			if err := db.Create(&model.WhiteList{
@@ -89,10 +88,7 @@ func RegisterWhiteListRoute(mux *http.ServeMux, db *utils.Db, sign utils.Sign) {
 					utils.WriteError(w, http.StatusBadRequest, "webhook is invalid")
 					return
 				}
-				u := datatypes.URL(*parsedURL)
-				wl.WebHook = &u
-			} else {
-				wl.WebHook = nil
+				wl.WebHook = datatypes.URL(*parsedURL)
 			}
 
 			if err := db.Save(&wl).Error; err != nil {
