@@ -10,7 +10,7 @@ type Session struct {
 	ObjectID     string `gorm:"primarykey"`
 	Nickname     string
 	OpenID       string
-	SessionToken string
+	SessionToken string `gorm:"index"`
 	ShortId      string
 	CreatedAt    time.Time
 	UpdatedAt    time.Time

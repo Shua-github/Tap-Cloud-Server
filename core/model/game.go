@@ -9,11 +9,11 @@ import (
 
 type GameSave struct {
 	Summary          string
-	GameFileObjectID string
+	GameFileObjectID string       `gorm:"index"`
 	ObjectID         string       `gorm:"primarykey"`
 	ModifiedAt       general.Date `gorm:"embedded"`
 	Name             string
-	UserObjectID     string
+	UserObjectID     string `gorm:"index"`
 	CreatedAt        time.Time
 	UpdatedAt        time.Time
 }

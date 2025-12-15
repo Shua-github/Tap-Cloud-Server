@@ -95,11 +95,13 @@ func handleRefreshSessionToken(c *utils.Custom, db *utils.Db, w http.ResponseWri
 			utils.ParseDbError(w, err)
 			return
 		}
-		c.SendWebHook(&utils.HookResponse{
-			Meta: utils.HookMeta{Type: "user", Action: "refresh_session_token"},
-			User: oldSession.ToHookUser(),
-			Data: session.ToHookUser(),
-		}, url.URL(wl.WebHook))
+		if wl.WebHook != nil {
+			c.SendWebHook(&utils.HookResponse{
+				Meta: utils.HookMeta{Type: "user", Action: "refresh_session_token"},
+				User: oldSession.ToHookUser(),
+				Data: session.ToHookUser(),
+			}, url.URL(*wl.WebHook))
+		}
 	}
 
 	utils.WriteJSON(w, http.StatusOK, SessionToResp(session))
@@ -127,11 +129,13 @@ func handleDeleteUser(c *utils.Custom, db *utils.Db, fb utils.FileBucket, w http
 			utils.ParseDbError(w, err)
 			return
 		}
-		c.SendWebHook(&utils.HookResponse{
-			Meta: utils.HookMeta{Type: "user", Action: "delete"},
-			User: session.ToHookUser(),
-			Data: nil,
-		}, url.URL(wl.WebHook))
+		if wl.WebHook != nil {
+			c.SendWebHook(&utils.HookResponse{
+				Meta: utils.HookMeta{Type: "user", Action: "delete"},
+				User: session.ToHookUser(),
+				Data: nil,
+			}, url.URL(*wl.WebHook))
+		}
 	}
 
 	w.WriteHeader(http.StatusOK)
@@ -172,11 +176,13 @@ func handleUpdateUser(c *utils.Custom, db *utils.Db, w http.ResponseWriter, r *h
 			utils.ParseDbError(w, err)
 			return
 		}
-		c.SendWebHook(&utils.HookResponse{
-			Meta: utils.HookMeta{Type: "user", Action: "update"},
-			User: session.ToHookUser(),
-			Data: HookData{session.Nickname},
-		}, url.URL(wl.WebHook))
+		if wl.WebHook != nil {
+			c.SendWebHook(&utils.HookResponse{
+				Meta: utils.HookMeta{Type: "user", Action: "update"},
+				User: session.ToHookUser(),
+				Data: HookData{session.Nickname},
+			}, url.URL(*wl.WebHook))
+		}
 	}
 
 	utils.WriteJSON(w, http.StatusOK, SessionToResp(&session))
