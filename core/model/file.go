@@ -7,7 +7,6 @@ import (
 
 	"github.com/Shua-github/Tap-Cloud-Server/core/general"
 	"github.com/Shua-github/Tap-Cloud-Server/core/utils"
-	"gorm.io/datatypes"
 	"gorm.io/gorm"
 )
 
@@ -18,14 +17,12 @@ type FileToken struct {
 	Name      string           `json:"name"`
 	ObjectID  string           `json:"objectId" gorm:"primarykey"`
 	Token     string           `json:"token"`
-	UploadURL string           `json:"upload_url"`
-	FileURL   datatypes.URL    `json:"url"`
 	ACL       general.ACL      `gorm:"serializer:json" json:"ACL"`
 	CreatedAt time.Time        `json:"-"`
 	UpdatedAt time.Time        `json:"-"`
 }
 
-func (f FileToken) MarshalJSON() ([]byte, error) {
+func (f FileToken) JSON(UploadURL string) ([]byte, error) {
 	type Alias FileToken
 	return json.Marshal(&struct {
 		Type      string `json:"__type"`
@@ -33,6 +30,7 @@ func (f FileToken) MarshalJSON() ([]byte, error) {
 		UpdatedAt string `json:"updatedAt"`
 		MimeType  string `json:"mime_type"`
 		Provider  string `json:"provider"`
+		UploadURL string `json:"upload_url"`
 		Alias
 	}{
 		Type:      "File",
@@ -40,6 +38,7 @@ func (f FileToken) MarshalJSON() ([]byte, error) {
 		UpdatedAt: utils.FormatUTCISO(f.UpdatedAt),
 		Provider:  "qiniu",
 		MimeType:  "application/octet-stream",
+		UploadURL: UploadURL,
 		Alias:     (Alias)(f),
 	})
 }

@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"net/http"
 	"time"
+
+	"github.com/Shua-github/Tap-Cloud-Server/core/types"
 )
 
 func RandomObjectID() string {
@@ -50,8 +52,8 @@ func WriteJSON(w http.ResponseWriter, statusCode int, data any) {
 	json.NewEncoder(w).Encode(data)
 }
 
-func WriteError(w http.ResponseWriter, statusCode int, message string) {
-	WriteJSON(w, statusCode, map[string]any{"code": statusCode, "error": message})
+func WriteError(w http.ResponseWriter, err types.TCSError) {
+	WriteJSON(w, err.HTTPCode, err)
 }
 
 func ReadJSON(r *http.Request, v any) error {

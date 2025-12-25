@@ -7,6 +7,7 @@ import (
 	"github.com/Shua-github/Tap-Cloud-Server/core/general"
 	"github.com/Shua-github/Tap-Cloud-Server/core/model"
 	"github.com/Shua-github/Tap-Cloud-Server/core/routes/user"
+	"github.com/Shua-github/Tap-Cloud-Server/core/types"
 	"github.com/Shua-github/Tap-Cloud-Server/core/utils"
 )
 
@@ -19,7 +20,7 @@ func RegisterRoutes(mux *http.ServeMux, db *utils.Db, custom *utils.Custom) {
 func handleCreateGameSave(c *utils.Custom, db *utils.Db, w http.ResponseWriter, r *http.Request) {
 	var req GameSaveRequest
 	if err := utils.ReadJSON(r, &req); err != nil {
-		utils.WriteError(w, http.StatusBadRequest, "Invalid request body")
+		utils.WriteError(w, types.BadRequestError)
 		return
 	}
 
@@ -58,7 +59,7 @@ func handleCreateGameSave(c *utils.Custom, db *utils.Db, w http.ResponseWriter, 
 			c.SendWebHook(&utils.HookResponse{
 				Meta: utils.HookMeta{Type: "save", Action: "create"},
 				User: session.ToHookUser(),
-				Data: HookData{file.FileURL.Path, req.Summary},
+				Data: HookData{file.ObjectID, req.Summary},
 			}, url.URL(wl.WebHook))
 		}
 	}
@@ -105,7 +106,7 @@ func handleUpdateGameSave(c *utils.Custom, db *utils.Db, w http.ResponseWriter, 
 
 	var req GameSaveRequest
 	if err := utils.ReadJSON(r, &req); err != nil {
-		utils.WriteError(w, http.StatusBadRequest, "Invalid request body")
+		utils.WriteError(w, types.BadRequestError)
 		return
 	}
 
@@ -145,7 +146,7 @@ func handleUpdateGameSave(c *utils.Custom, db *utils.Db, w http.ResponseWriter, 
 			c.SendWebHook(&utils.HookResponse{
 				Meta: utils.HookMeta{Type: "save", Action: "update"},
 				User: session.ToHookUser(),
-				Data: HookData{file.FileURL.Path, req.Summary},
+				Data: HookData{file.ObjectID, req.Summary},
 			}, url.URL(wl.WebHook))
 		}
 	}

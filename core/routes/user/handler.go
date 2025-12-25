@@ -5,6 +5,7 @@ import (
 	"net/url"
 
 	"github.com/Shua-github/Tap-Cloud-Server/core/model"
+	"github.com/Shua-github/Tap-Cloud-Server/core/types"
 	"github.com/Shua-github/Tap-Cloud-Server/core/utils"
 )
 
@@ -32,19 +33,19 @@ func RegisterRoutes(mux *http.ServeMux, db *utils.Db, c *utils.Custom, t *utils.
 func handleRegisterUser(c *utils.Custom, t *utils.I18nText, db *utils.Db, w http.ResponseWriter, r *http.Request) {
 	var req TapTapRegisterUserRequest
 	if err := utils.ReadJSON(r, &req); err != nil {
-		utils.WriteError(w, http.StatusBadRequest, "Invalid request body")
+		utils.WriteError(w, types.BadRequestError)
 		return
 	}
 
 	if req.AuthData.TapTap.OpenID == "" {
-		utils.WriteError(w, http.StatusBadRequest, "missing OpenID")
+		utils.WriteError(w, types.BadRequestError)
 		return
 	}
 
 	if c != nil {
 		var wl model.WhiteList
 		if err := db.First(&wl, "open_id = ?", req.AuthData.TapTap.OpenID).Error; err != nil {
-			utils.WriteError(w, http.StatusForbidden, t.OpenIDNotInWhiteList)
+			utils.WriteError(w, types.TCSError{HTTPCode: http.StatusForbidden, TCSCode: types.WhitelistNotFound, Message: t.OpenIDNotInWhiteList})
 			return
 		}
 	}
@@ -75,12 +76,12 @@ func handleRefreshSessionToken(c *utils.Custom, db *utils.Db, w http.ResponseWri
 
 	session, err := GetSession(r, db)
 	if err != nil {
-		utils.WriteError(w, http.StatusBadRequest, err.Error())
+		utils.WriteError(w, types.BadRequestError)
 		return
 	}
 
 	if session.ObjectID != objectID {
-		utils.WriteError(w, http.StatusForbidden, "Session does not belong to this user")
+		utils.WriteError(w, types.UnauthorizedError)
 		return
 	}
 
@@ -112,11 +113,11 @@ func handleDeleteUser(c *utils.Custom, db *utils.Db, fb utils.FileBucket, w http
 
 	session, err := GetSession(r, db)
 	if err != nil {
-		utils.WriteError(w, http.StatusBadRequest, err.Error())
+		utils.ParseDbError(w, err)
 		return
 	}
 	if session.ObjectID != objectID {
-		utils.WriteError(w, http.StatusForbidden, "Cannot delete other users")
+		utils.ParseDbError(w, err)
 		return
 	}
 
@@ -144,7 +145,7 @@ func handleDeleteUser(c *utils.Custom, db *utils.Db, fb utils.FileBucket, w http
 func handleGetCurrentUser(db *utils.Db, w http.ResponseWriter, r *http.Request) {
 	s, err := GetSession(r, db)
 	if err != nil {
-		utils.WriteError(w, http.StatusBadRequest, err.Error())
+		utils.ParseDbError(w, err)
 		return
 	}
 	utils.WriteJSON(w, http.StatusOK, SessionToResp(s))
@@ -154,19 +155,19 @@ func handleUpdateUser(c *utils.Custom, db *utils.Db, w http.ResponseWriter, r *h
 	objectID := r.PathValue("objectID")
 	var req UpdateUserRequest
 	if err := utils.ReadJSON(r, &req); err != nil {
-		utils.WriteError(w, http.StatusBadRequest, "Invalid request body")
+		utils.WriteError(w, types.BadRequestError)
 		return
 	}
 
 	var session model.Session
 	if err := db.Where("object_id = ?", objectID).First(&session).Error; err != nil {
-		utils.WriteError(w, http.StatusNotFound, "user not found")
+		utils.ParseDbError(w, err)
 		return
 	}
 
 	session.Nickname = req.Nickname
 	if err := db.Save(&session).Error; err != nil {
-		utils.WriteError(w, http.StatusInternalServerError, "DB Error:"+err.Error())
+		utils.ParseDbError(w, err)
 		return
 	}
 

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/Shua-github/Tap-Cloud-Server/core/model"
+	"github.com/Shua-github/Tap-Cloud-Server/core/types"
 	"github.com/Shua-github/Tap-Cloud-Server/core/utils"
 	"gorm.io/datatypes"
 )
@@ -16,32 +17,36 @@ func RegisterWhiteListRoute(mux *http.ServeMux, db *utils.Db, sign utils.Sign) {
 	mux.HandleFunc("/custom/tap_white_list/{OpenID}", func(w http.ResponseWriter, r *http.Request) {
 		OpenID := r.PathValue("OpenID")
 		if OpenID == "" {
-			utils.WriteError(w, http.StatusBadRequest, "OpenID is required")
+			utils.WriteError(w, types.BadRequestError)
 			return
 		}
 
 		body, err := io.ReadAll(r.Body)
 		if err != nil {
-			utils.WriteError(w, http.StatusBadRequest, "Failed to read request body")
+			utils.WriteError(w, types.BadRequestError)
 			return
 		}
 		defer r.Body.Close()
 
 		sig := sign(body)
 		if r.Header.Get("X-Sign") != sig {
-			utils.WriteError(w, http.StatusUnauthorized, "Invalid signature")
+			utils.WriteError(w, types.TCSError{
+				HTTPCode: http.StatusUnauthorized,
+				TCSCode:  types.BadSign,
+				Message:  "invalid signature",
+			})
 			return
 		}
 
 		var req WhiteListRequest
 		if err := json.Unmarshal(body, &req); err != nil {
-			utils.WriteError(w, http.StatusBadRequest, "Invalid request body")
+			utils.WriteError(w, types.BadRequestError)
 			return
 		}
 
 		now := uint64(time.Now().Unix())
 		if req.Exp < now {
-			utils.WriteError(w, http.StatusUnauthorized, "Request expired")
+			utils.WriteError(w, types.BadRequestError)
 			return
 		}
 
@@ -51,7 +56,7 @@ func RegisterWhiteListRoute(mux *http.ServeMux, db *utils.Db, sign utils.Sign) {
 			if req.WebHook != "" {
 				webhook, err := url.Parse(req.WebHook)
 				if err != nil {
-					utils.WriteError(w, http.StatusBadRequest, "webhook is invalid")
+					utils.WriteError(w, types.BadRequestError)
 					return
 				}
 				webhookURL = datatypes.URL(*webhook)
@@ -85,14 +90,14 @@ func RegisterWhiteListRoute(mux *http.ServeMux, db *utils.Db, sign utils.Sign) {
 			if req.WebHook != "" {
 				parsedURL, err := url.Parse(req.WebHook)
 				if err != nil {
-					utils.WriteError(w, http.StatusBadRequest, "webhook is invalid")
+					utils.WriteError(w, types.BadRequestError)
 					return
 				}
 				wl.WebHook = datatypes.URL(*parsedURL)
 			}
 
 			if err := db.Save(&wl).Error; err != nil {
-				utils.WriteError(w, http.StatusInternalServerError, "DB Error:"+err.Error())
+				utils.ParseDbError(w, err)
 				return
 			}
 
@@ -106,7 +111,7 @@ func RegisterWhiteListRoute(mux *http.ServeMux, db *utils.Db, sign utils.Sign) {
 			w.WriteHeader(http.StatusNoContent)
 
 		default:
-			utils.WriteError(w, http.StatusMethodNotAllowed, "Method not allowed")
+			utils.WriteError(w, types.MethodNotAllowedError)
 		}
 	})
 }

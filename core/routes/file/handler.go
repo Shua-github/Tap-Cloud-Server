@@ -7,8 +7,8 @@ import (
 	"strconv"
 
 	"github.com/Shua-github/Tap-Cloud-Server/core/model"
+	"github.com/Shua-github/Tap-Cloud-Server/core/types"
 	"github.com/Shua-github/Tap-Cloud-Server/core/utils"
-	"gorm.io/datatypes"
 )
 
 func RegisterRoutes(mux *http.ServeMux, db *utils.Db, bucket string, fb utils.FileBucket) {
@@ -26,7 +26,7 @@ func RegisterRoutes(mux *http.ServeMux, db *utils.Db, bucket string, fb utils.Fi
 func handleCreateFileToken(db *utils.Db, bucket string, w http.ResponseWriter, r *http.Request) {
 	var req FileTokenRequest
 	if err := utils.ReadJSON(r, &req); err != nil {
-		utils.WriteError(w, http.StatusBadRequest, "Invalid request body")
+		utils.WriteError(w, types.BadRequestError)
 		return
 	}
 
@@ -46,9 +46,6 @@ func handleCreateFileToken(db *utils.Db, bucket string, w http.ResponseWriter, r
 		Host:   r.Host,
 	}
 
-	fileURL := baseURL
-	fileURL.Path = "/1.1/files/" + sharedID
-
 	ft := new(model.FileToken)
 
 	ft.Bucket = bucket
@@ -57,16 +54,16 @@ func handleCreateFileToken(db *utils.Db, bucket string, w http.ResponseWriter, r
 	ft.MetaData = req.MetaData
 	ft.Name = req.Name
 	ft.Token = fileToken
-	ft.UploadURL = baseURL.String()
-	ft.FileURL = datatypes.URL(fileURL)
 	ft.ACL = req.ACL
 
 	if err := db.Create(&ft).Error; err != nil {
-		utils.WriteError(w, http.StatusInternalServerError, err.Error())
+		utils.ParseDbError(w, err)
 		return
 	}
 
-	utils.WriteJSON(w, http.StatusCreated, ft)
+	w.WriteHeader(http.StatusCreated)
+	ftJSON, _ := ft.JSON(baseURL.String())
+	w.Write(ftJSON)
 }
 
 func handleGetFile(fb utils.FileBucket, w http.ResponseWriter, r *http.Request) {
@@ -74,7 +71,7 @@ func handleGetFile(fb utils.FileBucket, w http.ResponseWriter, r *http.Request) 
 
 	fileObj, err := fb.Get(objectID)
 	if err != nil {
-		utils.WriteError(w, http.StatusNotFound, "File not found")
+		utils.WriteError(w, types.NotFoundError)
 		return
 	}
 	defer fileObj.Body.Close()
@@ -84,7 +81,7 @@ func handleGetFile(fb utils.FileBucket, w http.ResponseWriter, r *http.Request) 
 
 	_, err = io.Copy(w, fileObj.Body)
 	if err != nil {
-		utils.WriteError(w, http.StatusInternalServerError, "Failed to send file")
+		utils.WriteError(w, types.NewUnknownError("Failed to send file"))
 		return
 	}
 }
@@ -113,20 +110,20 @@ func handleStartUpload(db *utils.Db, fb utils.FileBucket, w http.ResponseWriter,
 
 	var ft model.FileToken
 	if err := db.Where("key = ?", key).First(&ft).Error; err != nil {
-		utils.WriteError(w, http.StatusInternalServerError, err.Error())
+		utils.ParseDbError(w, err)
 		return
 	}
 
 	_, uploadID, err := fb.CreateMultipartUpload(ft.Key)
 	if err != nil {
-		utils.WriteError(w, http.StatusInternalServerError, err.Error())
+		utils.ParseDbError(w, err)
 		return
 
 	}
 
 	ft.Token = utils.RandomObjectID()
 	if err := db.Save(&ft).Error; err != nil {
-		utils.WriteError(w, http.StatusInternalServerError, "DB Error:"+err.Error())
+		utils.ParseDbError(w, err)
 		return
 	}
 
@@ -139,18 +136,18 @@ func handleUploadPart(db *utils.Db, fb utils.FileBucket, w http.ResponseWriter, 
 	partNum, err := strconv.Atoi(r.PathValue("partNum"))
 
 	if err != nil {
-		utils.WriteError(w, http.StatusBadRequest, "Invalid part number")
+		utils.WriteError(w, types.BadRequestError)
 		return
 	}
 	upload, err := fb.GetMultipartUpload(key, uploadID)
 	if err != nil {
-		utils.WriteError(w, http.StatusInternalServerError, err.Error())
+		utils.WriteError(w, types.NewUnknownError(err.Error()))
 		return
 	}
 
 	uploadedPart, err := upload.UploadPart(partNum, r.Body)
 	if err != nil {
-		utils.WriteError(w, http.StatusInternalServerError, err.Error())
+		utils.WriteError(w, types.NewUnknownError(err.Error()))
 		return
 	}
 
@@ -163,19 +160,19 @@ func handleCompleteUpload(db *utils.Db, fb utils.FileBucket, w http.ResponseWrit
 
 	var req UploadPartRequest
 	if err := utils.ReadJSON(r, &req); err != nil {
-		utils.WriteError(w, http.StatusBadRequest, "Invalid request body")
+		utils.WriteError(w, types.BadRequestError)
 		return
 	}
 
 	upload, err := fb.GetMultipartUpload(key, uploadID)
 	if err != nil {
-		utils.WriteError(w, http.StatusInternalServerError, err.Error())
+		utils.WriteError(w, types.NewUnknownError(err.Error()))
 		return
 	}
 
 	_, err = upload.Complete(req.Parts)
 	if err != nil {
-		utils.WriteError(w, http.StatusInternalServerError, err.Error())
+		utils.WriteError(w, types.NewUnknownError(err.Error()))
 		return
 	}
 
