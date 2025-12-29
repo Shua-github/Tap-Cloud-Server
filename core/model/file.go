@@ -20,9 +20,11 @@ type FileToken struct {
 	ACL       general.ACL      `gorm:"serializer:json" json:"ACL"`
 	CreatedAt time.Time        `json:"-"`
 	UpdatedAt time.Time        `json:"-"`
+	UploadURL string           `json:"upload_url" gorm:"-"`
+	FileURL   string           `json:"url" gorm:"-"`
 }
 
-func (f FileToken) JSON(UploadURL string) ([]byte, error) {
+func (f FileToken) MarshalJSON() ([]byte, error) {
 	type Alias FileToken
 	return json.Marshal(&struct {
 		Type      string `json:"__type"`
@@ -30,7 +32,6 @@ func (f FileToken) JSON(UploadURL string) ([]byte, error) {
 		UpdatedAt string `json:"updatedAt"`
 		MimeType  string `json:"mime_type"`
 		Provider  string `json:"provider"`
-		UploadURL string `json:"upload_url"`
 		Alias
 	}{
 		Type:      "File",
@@ -38,7 +39,6 @@ func (f FileToken) JSON(UploadURL string) ([]byte, error) {
 		UpdatedAt: utils.FormatUTCISO(f.UpdatedAt),
 		Provider:  "qiniu",
 		MimeType:  "application/octet-stream",
-		UploadURL: UploadURL,
 		Alias:     (Alias)(f),
 	})
 }

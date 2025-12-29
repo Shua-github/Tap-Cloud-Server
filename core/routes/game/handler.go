@@ -72,30 +72,52 @@ func handleCreateGameSave(c *utils.Custom, db *utils.Db, w http.ResponseWriter, 
 }
 
 func handleGetGameSaves(db *utils.Db, w http.ResponseWriter, r *http.Request) {
-	var err error
-	var session *model.Session
-	var game_save model.GameSave
+
+	var scheme string
+	if r.TLS != nil {
+		scheme = "https"
+	} else {
+		scheme = "http"
+	}
+
 	var resp GameSaveResponse
-	if session, err = user.GetSession(r, db); err == nil {
-		if err = db.First(&game_save, "user_object_id = ?", session.ObjectID).Error; err == nil {
-			ft, err := model.GetFile(db, game_save.GameFileObjectID)
-			if err != nil {
-				utils.ParseDbError(w, err)
-			}
-			data := &GameSaveCore{
-				Name:       game_save.Name,
-				Summary:    game_save.Summary,
-				GameFile:   *ft,
-				ObjectID:   game_save.ObjectID,
-				User:       general.Pointer{ClassName: "_User", ObjectID: session.ObjectID},
-				ModifiedAt: game_save.ModifiedAt,
-				CreatedAt:  utils.FormatUTCISO(game_save.CreatedAt),
-				UpdatedAt:  utils.FormatUTCISO(game_save.UpdatedAt),
-			}
-			resp.Results = append(resp.Results, *data)
-			utils.WriteJSON(w, http.StatusOK, resp)
+
+	session, err := user.GetSession(r, db)
+	if err != nil {
+		utils.WriteJSON(w, http.StatusOK, resp)
+		return
+	}
+
+	var game_saves []model.GameSave
+	if err := db.Where("user_object_id = ?", session.ObjectID).Find(&game_saves).Error; err != nil {
+		utils.ParseDbError(w, err)
+		return
+	}
+
+	for _, gs := range game_saves {
+		ft, err := model.GetFile(db, gs.GameFileObjectID)
+		if err != nil {
+			utils.ParseDbError(w, err)
 			return
 		}
+		FileURL := url.URL{
+			Scheme: scheme,
+			Host:   r.Host,
+			Path:   "/1.1/files/" + ft.ObjectID,
+		}
+
+		ft.FileURL = FileURL.String()
+		data := &GameSaveCore{
+			Name:       gs.Name,
+			Summary:    gs.Summary,
+			GameFile:   *ft,
+			ObjectID:   gs.ObjectID,
+			User:       general.Pointer{ClassName: "_User", ObjectID: session.ObjectID},
+			ModifiedAt: gs.ModifiedAt,
+			CreatedAt:  utils.FormatUTCISO(gs.CreatedAt),
+			UpdatedAt:  utils.FormatUTCISO(gs.UpdatedAt),
+		}
+		resp.Results = append(resp.Results, *data)
 	}
 
 	utils.WriteJSON(w, http.StatusOK, resp)

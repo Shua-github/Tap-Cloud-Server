@@ -55,6 +55,7 @@ func handleCreateFileToken(db *utils.Db, bucket string, w http.ResponseWriter, r
 	ft.Name = req.Name
 	ft.Token = fileToken
 	ft.ACL = req.ACL
+	ft.UploadURL = baseURL.String()
 
 	if err := db.Create(&ft).Error; err != nil {
 		utils.ParseDbError(w, err)
@@ -62,8 +63,7 @@ func handleCreateFileToken(db *utils.Db, bucket string, w http.ResponseWriter, r
 	}
 
 	w.WriteHeader(http.StatusCreated)
-	ftJSON, _ := ft.JSON(baseURL.String())
-	w.Write(ftJSON)
+	utils.WriteJSON(w, http.StatusOK, ft)
 }
 
 func handleGetFile(fb utils.FileBucket, w http.ResponseWriter, r *http.Request) {
