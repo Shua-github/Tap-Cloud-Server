@@ -19,5 +19,6 @@ type Session struct {
 func (s Session) ToHookUser() (user utils.HookUser) {
 	user.OpenID = s.OpenID
 	user.SessionToken = s.SessionToken
+	user.Nickname = s.Nickname
 	return
 }

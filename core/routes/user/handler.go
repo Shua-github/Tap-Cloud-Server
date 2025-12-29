@@ -161,7 +161,6 @@ func handleDeleteUser(c *utils.Custom, db *utils.Db, fb utils.FileBucket, w http
 			c.SendWebHook(&utils.HookResponse{
 				Meta: utils.HookMeta{Type: "user", Action: "delete"},
 				User: session.ToHookUser(),
-				Data: nil,
 			}, url.URL(wl.WebHook))
 		}
 	}
@@ -208,7 +207,6 @@ func handleUpdateUser(c *utils.Custom, db *utils.Db, w http.ResponseWriter, r *h
 			c.SendWebHook(&utils.HookResponse{
 				Meta: utils.HookMeta{Type: "user", Action: "update"},
 				User: session.ToHookUser(),
-				Data: HookData{session.Nickname},
 			}, url.URL(wl.WebHook))
 		}
 	}

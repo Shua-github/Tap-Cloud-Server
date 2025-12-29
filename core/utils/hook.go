@@ -8,6 +8,7 @@ type HookMeta struct {
 type HookUser struct {
 	OpenID       string `json:"openid"`
 	SessionToken string `json:"session_token"`
+	Nickname     string `json:"nickname"`
 }
 
 type HookResponse struct {
