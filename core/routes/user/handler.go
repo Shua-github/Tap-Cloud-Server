@@ -52,6 +52,19 @@ func handleRegisterUser(c *utils.Custom, t *utils.I18nText, db *utils.Db, w http
 
 	var existing model.Session
 	if err := db.First(&existing, "open_id = ?", req.AuthData.TapTap.OpenID).Error; err == nil {
+		if c != nil {
+			var wl model.WhiteList
+			if err := db.First(&wl, "open_id = ?", existing.OpenID).Error; err != nil {
+				utils.ParseDbError(w, err)
+				return
+			}
+			if wl.WebHook.String() != "" {
+				c.SendWebHook(&utils.HookResponse{
+					Meta: utils.HookMeta{Type: "user", Action: "login"},
+					User: existing.ToHookUser(),
+				}, url.URL(wl.WebHook))
+			}
+		}
 		utils.WriteJSON(w, http.StatusOK, SessionToResp(&existing))
 		return
 	}
@@ -66,6 +79,20 @@ func handleRegisterUser(c *utils.Custom, t *utils.I18nText, db *utils.Db, w http
 	if err := db.Create(&session).Error; err != nil {
 		utils.ParseDbError(w, err)
 		return
+	}
+
+	if c != nil {
+		var wl model.WhiteList
+		if err := db.First(&wl, "open_id = ?", existing.OpenID).Error; err != nil {
+			utils.ParseDbError(w, err)
+			return
+		}
+		if wl.WebHook.String() != "" {
+			c.SendWebHook(&utils.HookResponse{
+				Meta: utils.HookMeta{Type: "user", Action: "create"},
+				User: existing.ToHookUser(),
+			}, url.URL(wl.WebHook))
+		}
 	}
 
 	utils.WriteJSON(w, http.StatusCreated, SessionToResp(&session))
