@@ -22,6 +22,13 @@ func main() {
 		}
 		sign := NewSign([]byte(cfg.Custom.SignKey))
 		custom = &utils.Custom{Sign: sign, Client: clinet}
+
+		whiteList, err := loadWhiteList("./white_list.json")
+		if err != nil {
+			panic(err)
+		}
+		custom.WhiteListCheck = whiteListCheck(whiteList)
+		custom.OnEventHandler = sendWebhook(custom.Sign, custom.Client, cfg.Custom.WebHookURL)
 	}
 
 	handler := &core.Handler{

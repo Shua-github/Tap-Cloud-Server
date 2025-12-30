@@ -2,7 +2,6 @@ package user
 
 import (
 	"net/http"
-	"net/url"
 
 	"github.com/Shua-github/Tap-Cloud-Server/core/model"
 	"github.com/Shua-github/Tap-Cloud-Server/core/types"
@@ -42,28 +41,22 @@ func handleRegisterUser(c *utils.Custom, t *utils.I18nText, db *utils.Db, w http
 		return
 	}
 
-	if c != nil {
-		var wl model.WhiteList
-		if err := db.First(&wl, "open_id = ?", req.AuthData.TapTap.OpenID).Error; err != nil {
-			utils.WriteError(w, types.TCSError{HTTPCode: http.StatusForbidden, TCSCode: types.WhitelistNotFound, Message: t.OpenIDNotInWhiteList})
-			return
-		}
+	if c != nil && !c.WhiteListCheck(req.AuthData.TapTap.OpenID) {
+		utils.WriteError(w, types.TCSError{
+			HTTPCode: http.StatusForbidden,
+			TCSCode:  types.WhitelistNotFound,
+			Message:  t.OpenIDNotInWhiteList,
+		})
+		return
 	}
 
 	var existing model.Session
 	if err := db.First(&existing, "open_id = ?", req.AuthData.TapTap.OpenID).Error; err == nil {
 		if c != nil {
-			var wl model.WhiteList
-			if err := db.First(&wl, "open_id = ?", existing.OpenID).Error; err != nil {
-				utils.ParseDbError(w, err)
-				return
-			}
-			if wl.WebHook.String() != "" {
-				c.SendWebHook(&utils.HookResponse{
-					Meta: utils.HookMeta{Type: "user", Action: "login"},
-					User: existing.ToHookUser(),
-				}, url.URL(wl.WebHook))
-			}
+			c.OnEventHandler(&utils.Event{
+				Meta: utils.Meta{Type: "user", Action: "login"},
+				User: existing.ToUser(),
+			})
 		}
 		utils.WriteJSON(w, http.StatusOK, SessionToResp(&existing))
 		return
@@ -82,17 +75,10 @@ func handleRegisterUser(c *utils.Custom, t *utils.I18nText, db *utils.Db, w http
 	}
 
 	if c != nil {
-		var wl model.WhiteList
-		if err := db.First(&wl, "open_id = ?", existing.OpenID).Error; err != nil {
-			utils.ParseDbError(w, err)
-			return
-		}
-		if wl.WebHook.String() != "" {
-			c.SendWebHook(&utils.HookResponse{
-				Meta: utils.HookMeta{Type: "user", Action: "create"},
-				User: existing.ToHookUser(),
-			}, url.URL(wl.WebHook))
-		}
+		c.OnEventHandler(&utils.Event{
+			Meta: utils.Meta{Type: "user", Action: "create"},
+			User: existing.ToUser(),
+		})
 	}
 
 	utils.WriteJSON(w, http.StatusCreated, SessionToResp(&session))
@@ -118,18 +104,11 @@ func handleRefreshSessionToken(c *utils.Custom, db *utils.Db, w http.ResponseWri
 	db.Save(&session)
 
 	if c != nil {
-		var wl model.WhiteList
-		if err := db.First(&wl, "open_id = ?", session.OpenID).Error; err != nil {
-			utils.ParseDbError(w, err)
-			return
-		}
-		if wl.WebHook.String() != "" {
-			c.SendWebHook(&utils.HookResponse{
-				Meta: utils.HookMeta{Type: "user", Action: "refresh_session_token"},
-				User: oldSession.ToHookUser(),
-				Data: session.ToHookUser(),
-			}, url.URL(wl.WebHook))
-		}
+		c.OnEventHandler(&utils.Event{
+			Meta: utils.Meta{Type: "user", Action: "refresh_session_token"},
+			User: oldSession.ToUser(),
+			Data: session.ToUser(),
+		})
 	}
 
 	utils.WriteJSON(w, http.StatusOK, SessionToResp(session))
@@ -152,17 +131,10 @@ func handleDeleteUser(c *utils.Custom, db *utils.Db, fb utils.FileBucket, w http
 	db.Delete(&session)
 
 	if c != nil {
-		var wl model.WhiteList
-		if err := db.First(&wl, "open_id = ?", session.OpenID).Error; err != nil {
-			utils.ParseDbError(w, err)
-			return
-		}
-		if wl.WebHook.String() != "" {
-			c.SendWebHook(&utils.HookResponse{
-				Meta: utils.HookMeta{Type: "user", Action: "delete"},
-				User: session.ToHookUser(),
-			}, url.URL(wl.WebHook))
-		}
+		c.OnEventHandler(&utils.Event{
+			Meta: utils.Meta{Type: "user", Action: "delete"},
+			User: session.ToUser(),
+		})
 	}
 
 	w.WriteHeader(http.StatusOK)
@@ -198,17 +170,11 @@ func handleUpdateUser(c *utils.Custom, db *utils.Db, w http.ResponseWriter, r *h
 	}
 
 	if c != nil {
-		var wl model.WhiteList
-		if err := db.First(&wl, "open_id = ?", session.OpenID).Error; err != nil {
-			utils.ParseDbError(w, err)
-			return
-		}
-		if wl.WebHook.String() != "" {
-			c.SendWebHook(&utils.HookResponse{
-				Meta: utils.HookMeta{Type: "user", Action: "update"},
-				User: session.ToHookUser(),
-			}, url.URL(wl.WebHook))
-		}
+		c.OnEventHandler(&utils.Event{
+			Meta: utils.Meta{Type: "user", Action: "update"},
+			User: session.ToUser(),
+		})
+
 	}
 
 	utils.WriteJSON(w, http.StatusOK, SessionToResp(&session))

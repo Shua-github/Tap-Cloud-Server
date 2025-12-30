@@ -21,7 +21,8 @@ type Config struct {
 type CustomConfig struct {
 	Switch         bool     `json:"switch"`
 	SignKey        string   `json:"sign_key"`
-	WebHookTimeOut Duration `json:"timeout"`
+	WebHookURL     string   `json:"webhook_url"`
+	WebHookTimeOut Duration `json:"webhook_timeout"`
 }
 
 type Duration time.Duration

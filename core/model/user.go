@@ -16,7 +16,7 @@ type Session struct {
 	UpdatedAt    time.Time
 }
 
-func (s Session) ToHookUser() (user utils.HookUser) {
+func (s Session) ToUser() (user utils.User) {
 	user.OpenID = s.OpenID
 	user.SessionToken = s.SessionToken
 	user.Nickname = s.Nickname

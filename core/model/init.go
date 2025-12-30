@@ -6,7 +6,6 @@ import (
 
 func Init(db *utils.Db) {
 	db.AutoMigrate(&GameSave{})
-	db.AutoMigrate(&WhiteList{})
 	db.AutoMigrate(&FileToken{})
 	db.AutoMigrate(&Session{})
 }

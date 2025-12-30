@@ -56,7 +56,7 @@ archives:
       - goos: windows
         formats: [zip]
     files:
-      - src: ./resources/config.json
+      - src: ./resources/*
         strip_parent: true
       - README.md
       - LICENSE.txt

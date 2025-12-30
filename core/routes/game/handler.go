@@ -45,23 +45,11 @@ func handleCreateGameSave(c *utils.Custom, db *utils.Db, w http.ResponseWriter, 
 	}
 
 	if c != nil {
-		var wl model.WhiteList
-		if err := db.First(&wl, "open_id = ?", session.OpenID).Error; err != nil {
-			utils.ParseDbError(w, err)
-			return
-		}
-		if wl.WebHook.String() != "" {
-			file, err := model.GetFile(db, game_save.GameFileObjectID)
-			if err != nil {
-				utils.ParseDbError(w, err)
-				return
-			}
-			c.SendWebHook(&utils.HookResponse{
-				Meta: utils.HookMeta{Type: "save", Action: "create"},
-				User: session.ToHookUser(),
-				Data: HookData{file.ObjectID, req.Summary},
-			}, url.URL(wl.WebHook))
-		}
+		c.OnEventHandler(&utils.Event{
+			Meta: utils.Meta{Type: "save", Action: "create"},
+			User: session.ToUser(),
+			Data: HookData{game_save.GameFileObjectID, req.Summary},
+		})
 	}
 
 	utils.WriteJSON(w, http.StatusCreated, CreateGameSaveResponse{
@@ -153,24 +141,12 @@ func handleUpdateGameSave(c *utils.Custom, db *utils.Db, w http.ResponseWriter, 
 			utils.ParseDbError(w, err)
 			return
 		}
-
-		var wl model.WhiteList
-		if err := db.First(&wl, "open_id = ?", session.OpenID).Error; err != nil {
-			utils.ParseDbError(w, err)
-			return
-		}
-		if wl.WebHook.String() != "" {
-			file, err := model.GetFile(db, game_save.GameFileObjectID)
-			if err != nil {
-				utils.ParseDbError(w, err)
-				return
-			}
-			c.SendWebHook(&utils.HookResponse{
-				Meta: utils.HookMeta{Type: "save", Action: "update"},
-				User: session.ToHookUser(),
-				Data: HookData{file.ObjectID, req.Summary},
-			}, url.URL(wl.WebHook))
-		}
+		c.OnEventHandler(&utils.Event{
+			Meta: utils.Meta{Type: "save", Action: "update"},
+			User: session.ToUser(),
+			Data: HookData{game_save.GameFileObjectID, req.Summary},
+		})
 	}
+
 	utils.WriteJSON(w, http.StatusOK, UpdateGameSaveResponse{UpdatedAt: utils.FormatUTCISO(game_save.UpdatedAt)})
 }
