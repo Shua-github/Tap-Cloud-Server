@@ -3,6 +3,8 @@ package user
 type TapTap struct {
 	OpenID string `json:"openid"`
 	Name   string `json:"name"`
+	Kid    string `json:"kid"`
+	MacKey string `json:"mac_key"`
 }
 
 type AuthData struct {

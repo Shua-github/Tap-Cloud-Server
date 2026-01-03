@@ -1,10 +1,8 @@
 package model
 
-import (
-	"github.com/Shua-github/Tap-Cloud-Server/core/utils"
-)
+import "gorm.io/gorm"
 
-func Init(db *utils.Db) {
+func Init(db *gorm.DB) {
 	db.AutoMigrate(&GameSave{})
 	db.AutoMigrate(&FileToken{})
 	db.AutoMigrate(&Session{})

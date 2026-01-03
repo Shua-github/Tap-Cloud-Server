@@ -9,15 +9,16 @@ import (
 	"github.com/Shua-github/Tap-Cloud-Server/core/routes/user"
 	"github.com/Shua-github/Tap-Cloud-Server/core/types"
 	"github.com/Shua-github/Tap-Cloud-Server/core/utils"
+	"gorm.io/gorm"
 )
 
-func RegisterRoutes(mux *http.ServeMux, db *utils.Db, custom *utils.Custom) {
+func RegisterRoutes(mux *http.ServeMux, db *gorm.DB, custom *types.Custom) {
 	mux.HandleFunc("GET /1.1/classes/_GameSave", func(w http.ResponseWriter, r *http.Request) { handleGetGameSaves(db, w, r) })
 	mux.HandleFunc("POST /1.1/classes/_GameSave", func(w http.ResponseWriter, r *http.Request) { handleCreateGameSave(custom, db, w, r) })
 	mux.HandleFunc("PUT /1.1/classes/_GameSave/{objectID}", func(w http.ResponseWriter, r *http.Request) { handleUpdateGameSave(custom, db, w, r) })
 }
 
-func handleCreateGameSave(c *utils.Custom, db *utils.Db, w http.ResponseWriter, r *http.Request) {
+func handleCreateGameSave(c *types.Custom, db *gorm.DB, w http.ResponseWriter, r *http.Request) {
 	var req GameSaveRequest
 	if err := utils.ReadJSON(r, &req); err != nil {
 		utils.WriteError(w, types.BadRequestError)
@@ -26,7 +27,7 @@ func handleCreateGameSave(c *utils.Custom, db *utils.Db, w http.ResponseWriter, 
 
 	session, err := user.GetSession(r, db)
 	if err != nil {
-		utils.ParseDbError(w, err)
+		utils.WriteError(w, types.BadRequestError)
 		return
 	}
 
@@ -36,7 +37,7 @@ func handleCreateGameSave(c *utils.Custom, db *utils.Db, w http.ResponseWriter, 
 		UserObjectID:     session.ObjectID,
 		ModifiedAt:       req.ModifiedAt,
 		Name:             req.Name,
-		ObjectID:         utils.RandomObjectID(),
+		ObjectID:         utils.RandomID(),
 	}
 
 	if err := db.Create(&game_save).Error; err != nil {
@@ -45,10 +46,10 @@ func handleCreateGameSave(c *utils.Custom, db *utils.Db, w http.ResponseWriter, 
 	}
 
 	if c != nil {
-		c.OnEventHandler(&utils.Event{
-			Meta: utils.Meta{Type: "save", Action: "create"},
-			User: session.ToUser(),
-			Data: HookData{game_save.GameFileObjectID, req.Summary},
+		c.OnEventHandler(&types.Event{
+			Meta: types.EventMeta{Type: "save", Action: "create"},
+			User: session.ToEventUser(),
+			Data: EventData{game_save.GameFileObjectID, req.Summary},
 		})
 	}
 
@@ -59,7 +60,7 @@ func handleCreateGameSave(c *utils.Custom, db *utils.Db, w http.ResponseWriter, 
 	})
 }
 
-func handleGetGameSaves(db *utils.Db, w http.ResponseWriter, r *http.Request) {
+func handleGetGameSaves(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
 
 	var scheme string
 	if r.TLS != nil {
@@ -111,7 +112,7 @@ func handleGetGameSaves(db *utils.Db, w http.ResponseWriter, r *http.Request) {
 	utils.WriteJSON(w, http.StatusOK, resp)
 }
 
-func handleUpdateGameSave(c *utils.Custom, db *utils.Db, w http.ResponseWriter, r *http.Request) {
+func handleUpdateGameSave(c *types.Custom, db *gorm.DB, w http.ResponseWriter, r *http.Request) {
 	objectID := r.PathValue("objectID")
 
 	var req GameSaveRequest
@@ -141,10 +142,10 @@ func handleUpdateGameSave(c *utils.Custom, db *utils.Db, w http.ResponseWriter, 
 			utils.ParseDbError(w, err)
 			return
 		}
-		c.OnEventHandler(&utils.Event{
-			Meta: utils.Meta{Type: "save", Action: "update"},
-			User: session.ToUser(),
-			Data: HookData{game_save.GameFileObjectID, req.Summary},
+		c.OnEventHandler(&types.Event{
+			Meta: types.EventMeta{Type: "save", Action: "update"},
+			User: session.ToEventUser(),
+			Data: EventData{game_save.GameFileObjectID, req.Summary},
 		})
 	}
 

@@ -6,8 +6,9 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"slices"
 
-	"github.com/Shua-github/Tap-Cloud-Server/core/utils"
+	"github.com/Shua-github/Tap-Cloud-Server/core/types"
 )
 
 func loadWhiteList(path string) ([]string, error) {
@@ -24,26 +25,27 @@ func loadWhiteList(path string) ([]string, error) {
 	return list, nil
 }
 
-func whiteListCheck(whiteList []string) utils.WhiteListCheck {
-	return func(openid string) bool {
-		for _, id := range whiteList {
-			if id == openid {
-				return true
-			}
+func newWhiteListCheck(whiteList []string, msg string) types.UserAccessCheck {
+	return func(openid string) *types.TCSError {
+		if slices.Contains(whiteList, openid) {
+			return nil
 		}
-		return false
+		return &types.TCSError{
+			HTTPCode: http.StatusForbidden,
+			Message:  msg,
+		}
 	}
 }
 
-func sendWebhook(sign utils.Sign, client *http.Client, webhookURL string) utils.OnEventHandler {
-	return func(event *utils.Event) {
-		go func(ev *utils.Event) {
+func newSendWebhook(key []byte, client *http.Client, webhookURL string) types.OnEventHandler {
+	return func(event *types.Event) {
+		go func(ev *types.Event) {
 			data, err := json.Marshal(ev)
 			if err != nil {
 				return
 			}
 
-			signature := sign(data)
+			signature := sign(key, data)
 
 			req, err := http.NewRequest("POST", webhookURL, bytes.NewBuffer(data))
 			if err != nil {

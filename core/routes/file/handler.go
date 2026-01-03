@@ -9,9 +9,10 @@ import (
 	"github.com/Shua-github/Tap-Cloud-Server/core/model"
 	"github.com/Shua-github/Tap-Cloud-Server/core/types"
 	"github.com/Shua-github/Tap-Cloud-Server/core/utils"
+	"gorm.io/gorm"
 )
 
-func RegisterRoutes(mux *http.ServeMux, db *utils.Db, bucket string, fb utils.FileBucket) {
+func RegisterRoutes(mux *http.ServeMux, db *gorm.DB, bucket string, fb types.FileBucket) {
 	mux.HandleFunc("POST /1.1/fileTokens", func(w http.ResponseWriter, r *http.Request) { handleCreateFileToken(db, bucket, w, r) })
 	mux.HandleFunc("DELETE /1.1/files/{ObjectID}", func(w http.ResponseWriter, r *http.Request) { handleDeleteFile(db, fb, w, r) })
 	mux.HandleFunc("GET /1.1/files/{ObjectID}", func(w http.ResponseWriter, r *http.Request) { handleGetFile(fb, w, r) })
@@ -23,16 +24,16 @@ func RegisterRoutes(mux *http.ServeMux, db *utils.Db, bucket string, fb utils.Fi
 	mux.HandleFunc("POST /buckets/{bucket}/objects/{tokenKey}/uploads/{uploadID}", func(w http.ResponseWriter, r *http.Request) { handleCompleteUpload(db, fb, w, r) })
 }
 
-func handleCreateFileToken(db *utils.Db, bucket string, w http.ResponseWriter, r *http.Request) {
+func handleCreateFileToken(db *gorm.DB, bucket string, w http.ResponseWriter, r *http.Request) {
 	var req FileTokenRequest
 	if err := utils.ReadJSON(r, &req); err != nil {
 		utils.WriteError(w, types.BadRequestError)
 		return
 	}
 
-	sharedID := utils.RandomObjectID()
+	sharedID := utils.RandomID()
 
-	fileToken := utils.RandomObjectID()
+	fileToken := utils.RandomID()
 
 	var scheme string
 	if r.TLS != nil {
@@ -66,7 +67,7 @@ func handleCreateFileToken(db *utils.Db, bucket string, w http.ResponseWriter, r
 	utils.WriteJSON(w, http.StatusOK, ft)
 }
 
-func handleGetFile(fb utils.FileBucket, w http.ResponseWriter, r *http.Request) {
+func handleGetFile(fb types.FileBucket, w http.ResponseWriter, r *http.Request) {
 	objectID := r.PathValue("ObjectID")
 
 	fileObj, err := fb.Get(objectID)
@@ -86,7 +87,7 @@ func handleGetFile(fb utils.FileBucket, w http.ResponseWriter, r *http.Request) 
 	}
 }
 
-func handleDeleteFile(db *utils.Db, fb utils.FileBucket, w http.ResponseWriter, r *http.Request) {
+func handleDeleteFile(db *gorm.DB, fb types.FileBucket, w http.ResponseWriter, r *http.Request) {
 	objectID := r.PathValue("ObjectID")
 	var file model.FileToken
 
@@ -105,7 +106,7 @@ func handleFileCallback(w http.ResponseWriter, r *http.Request) {
 	utils.WriteJSON(w, http.StatusOK, FileCallbackResponse{Result: true})
 }
 
-func handleStartUpload(db *utils.Db, fb utils.FileBucket, w http.ResponseWriter, r *http.Request) {
+func handleStartUpload(db *gorm.DB, fb types.FileBucket, w http.ResponseWriter, r *http.Request) {
 	key, _ := utils.DecodeBase64Key(r.PathValue("tokenKey"))
 
 	var ft model.FileToken
@@ -114,14 +115,14 @@ func handleStartUpload(db *utils.Db, fb utils.FileBucket, w http.ResponseWriter,
 		return
 	}
 
-	_, uploadID, err := fb.CreateMultipartUpload(ft.Key)
+	uploadID, err := fb.CreateMultipartUpload(ft.Key)
 	if err != nil {
 		utils.ParseDbError(w, err)
 		return
 
 	}
 
-	ft.Token = utils.RandomObjectID()
+	ft.Token = utils.RandomID()
 	if err := db.Save(&ft).Error; err != nil {
 		utils.ParseDbError(w, err)
 		return
@@ -130,7 +131,7 @@ func handleStartUpload(db *utils.Db, fb utils.FileBucket, w http.ResponseWriter,
 	utils.WriteJSON(w, http.StatusOK, StartUploadResponse{UploadID: uploadID})
 }
 
-func handleUploadPart(db *utils.Db, fb utils.FileBucket, w http.ResponseWriter, r *http.Request) {
+func handleUploadPart(db *gorm.DB, fb types.FileBucket, w http.ResponseWriter, r *http.Request) {
 	uploadID := r.PathValue("uploadID")
 	key, _ := utils.DecodeBase64Key(r.PathValue("tokenKey"))
 	partNum, err := strconv.Atoi(r.PathValue("partNum"))
@@ -154,7 +155,7 @@ func handleUploadPart(db *utils.Db, fb utils.FileBucket, w http.ResponseWriter, 
 	utils.WriteJSON(w, http.StatusOK, UploadPartResponse{Etag: uploadedPart.ETag})
 }
 
-func handleCompleteUpload(db *utils.Db, fb utils.FileBucket, w http.ResponseWriter, r *http.Request) {
+func handleCompleteUpload(db *gorm.DB, fb types.FileBucket, w http.ResponseWriter, r *http.Request) {
 	uploadID := r.PathValue("uploadID")
 	key, _ := utils.DecodeBase64Key(r.PathValue("tokenKey"))
 

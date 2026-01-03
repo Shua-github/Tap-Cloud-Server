@@ -2,7 +2,7 @@ package file
 
 import (
 	"github.com/Shua-github/Tap-Cloud-Server/core/general"
-	"github.com/Shua-github/Tap-Cloud-Server/core/utils"
+	"github.com/Shua-github/Tap-Cloud-Server/core/types"
 )
 
 type FileTokenRequest struct {
@@ -14,7 +14,7 @@ type FileTokenRequest struct {
 }
 
 type UploadPartRequest struct {
-	Parts []utils.UploadedPart `json:"parts"`
+	Parts []types.UploadedPart `json:"parts"`
 }
 
 type StartUploadResponse struct {

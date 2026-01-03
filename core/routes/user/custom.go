@@ -1,5 +1,5 @@
 package user
 
-type HookData struct {
+type EventData struct {
 	NickName string `json:"nickname"`
 }

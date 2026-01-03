@@ -12,7 +12,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Shua-github/Tap-Cloud-Server/core/utils"
+	"github.com/Shua-github/Tap-Cloud-Server/core/types"
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 )
@@ -35,7 +35,7 @@ type LocalFileBucket struct {
 	mu      sync.RWMutex
 }
 
-func NewLocalFileBucket(name string) utils.FileBucket {
+func NewLocalFileBucket(name string) types.FileBucket {
 	rootDir := filepath.Join("./data/file_buckets", name)
 	if err := os.MkdirAll(rootDir, 0755); err != nil {
 		panic(fmt.Sprintf("failed to create bucket directory: %v", err))
@@ -49,7 +49,7 @@ func NewLocalFileBucket(name string) utils.FileBucket {
 	}
 }
 
-func (b *LocalFileBucket) Get(key string) (*utils.FileObject, error) {
+func (b *LocalFileBucket) Get(key string) (*types.FileObject, error) {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 
@@ -84,7 +84,7 @@ func (b *LocalFileBucket) Get(key string) (*utils.FileObject, error) {
 		return nil, fmt.Errorf("etag not found in meta: %s", key)
 	}
 
-	return &utils.FileObject{
+	return &types.FileObject{
 		Key:  key,
 		Body: io.NopCloser(bytes.NewReader(data)),
 		ETag: etag,
@@ -111,18 +111,17 @@ func (b *LocalFileBucket) Delete(key string) error {
 	return nil
 }
 
-func (b *LocalFileBucket) CreateMultipartUpload(ikey string) (okey string, uploadID string, err error) {
-	okey = ikey
+func (b *LocalFileBucket) CreateMultipartUpload(key string) (uploadID string, err error) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	uploadID = fmt.Sprintf("%d_%s", b.getCurrentTimestamp(), strings.Replace(ikey, "/", "_", -1))
+	uploadID = fmt.Sprintf("%d_%s", b.getCurrentTimestamp(), strings.Replace(key, "/", "_", -1))
 	uploadDir := filepath.Join(b.rootDir, "_multipart", uploadID)
 	if err = os.MkdirAll(uploadDir, 0755); err != nil {
 		err = fmt.Errorf("failed to create upload directory: %v", err)
 		return
 	}
 	metaFile := filepath.Join(uploadDir, "_meta.txt")
-	if err = os.WriteFile(metaFile, []byte(ikey), 0644); err != nil {
+	if err = os.WriteFile(metaFile, []byte(key), 0644); err != nil {
 		os.RemoveAll(uploadDir)
 		err = fmt.Errorf("failed to save upload metadata: %v", err)
 		return
@@ -130,7 +129,7 @@ func (b *LocalFileBucket) CreateMultipartUpload(ikey string) (okey string, uploa
 	return
 }
 
-func (b *LocalFileBucket) GetMultipartUpload(key string, uploadID string) (utils.MultipartUpload, error) {
+func (b *LocalFileBucket) GetMultipartUpload(key string, uploadID string) (types.MultipartUpload, error) {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 	uploadDir := filepath.Join(b.rootDir, "_multipart", uploadID)
@@ -164,7 +163,7 @@ type LocalMultipartUpload struct {
 	bucket    *LocalFileBucket
 }
 
-func (u *LocalMultipartUpload) UploadPart(partNumber int, data io.Reader) (utils.UploadedPart, error) {
+func (u *LocalMultipartUpload) UploadPart(partNumber int, data io.Reader) (types.UploadedPart, error) {
 	u.bucket.mu.Lock()
 	defer u.bucket.mu.Unlock()
 	partDataFile := filepath.Join(u.uploadDir, fmt.Sprintf("part_%d.data", partNumber))
@@ -172,7 +171,7 @@ func (u *LocalMultipartUpload) UploadPart(partNumber int, data io.Reader) (utils
 
 	file, err := os.Create(partDataFile)
 	if err != nil {
-		return utils.UploadedPart{}, fmt.Errorf("failed to create part data file: %v", err)
+		return types.UploadedPart{}, fmt.Errorf("failed to create part data file: %v", err)
 	}
 	defer file.Close()
 
@@ -180,22 +179,22 @@ func (u *LocalMultipartUpload) UploadPart(partNumber int, data io.Reader) (utils
 	teeReader := io.TeeReader(data, &buf)
 	hash := md5.New()
 	if _, err := io.Copy(io.MultiWriter(file, hash), teeReader); err != nil {
-		return utils.UploadedPart{}, fmt.Errorf("failed to write part data: %v", err)
+		return types.UploadedPart{}, fmt.Errorf("failed to write part data: %v", err)
 	}
 	etag := fmt.Sprintf("%x", hash.Sum(nil))
 
 	metaData := fmt.Sprintf("etag=%s\n", etag)
 	if err := os.WriteFile(partMetaFile, []byte(metaData), 0644); err != nil {
-		return utils.UploadedPart{}, fmt.Errorf("failed to save part metadata: %v", err)
+		return types.UploadedPart{}, fmt.Errorf("failed to save part metadata: %v", err)
 	}
 
-	return utils.UploadedPart{
+	return types.UploadedPart{
 		PartNumber: partNumber,
 		ETag:       etag,
 	}, nil
 }
 
-func (u *LocalMultipartUpload) Complete(parts []utils.UploadedPart) (utils.FileObject, error) {
+func (u *LocalMultipartUpload) Complete(parts []types.UploadedPart) (types.FileObject, error) {
 	u.bucket.mu.Lock()
 	defer u.bucket.mu.Unlock()
 	sort.Slice(parts, func(i, j int) bool {
@@ -206,12 +205,12 @@ func (u *LocalMultipartUpload) Complete(parts []utils.UploadedPart) (utils.FileO
 	finalMetaPath := filepath.Join(u.bucket.rootDir, u.key+".meta")
 
 	if err := os.MkdirAll(filepath.Dir(finalDataPath), 0755); err != nil {
-		return utils.FileObject{}, fmt.Errorf("failed to create final file directory: %v", err)
+		return types.FileObject{}, fmt.Errorf("failed to create final file directory: %v", err)
 	}
 
 	finalFile, err := os.Create(finalDataPath)
 	if err != nil {
-		return utils.FileObject{}, fmt.Errorf("failed to create final data file: %v", err)
+		return types.FileObject{}, fmt.Errorf("failed to create final data file: %v", err)
 	}
 	defer finalFile.Close()
 
@@ -226,7 +225,7 @@ func (u *LocalMultipartUpload) Complete(parts []utils.UploadedPart) (utils.FileO
 		if err != nil {
 			finalFile.Close()
 			os.Remove(finalDataPath)
-			return utils.FileObject{}, fmt.Errorf("failed to read part metadata: %v", err)
+			return types.FileObject{}, fmt.Errorf("failed to read part metadata: %v", err)
 		}
 		metaLines := strings.Split(string(metaData), "\n")
 		var partEtag string
@@ -239,20 +238,20 @@ func (u *LocalMultipartUpload) Complete(parts []utils.UploadedPart) (utils.FileO
 		if partEtag != part.ETag {
 			finalFile.Close()
 			os.Remove(finalDataPath)
-			return utils.FileObject{}, fmt.Errorf("part ETag mismatch for part %d", part.PartNumber)
+			return types.FileObject{}, fmt.Errorf("part ETag mismatch for part %d", part.PartNumber)
 		}
 
 		partData, err := os.Open(partDataFile)
 		if err != nil {
 			finalFile.Close()
 			os.Remove(finalDataPath)
-			return utils.FileObject{}, fmt.Errorf("failed to open part data file: %v", err)
+			return types.FileObject{}, fmt.Errorf("failed to open part data file: %v", err)
 		}
 		if _, err := io.Copy(multiWriter, partData); err != nil {
 			partData.Close()
 			finalFile.Close()
 			os.Remove(finalDataPath)
-			return utils.FileObject{}, fmt.Errorf("failed to copy part data: %v", err)
+			return types.FileObject{}, fmt.Errorf("failed to copy part data: %v", err)
 		}
 		partData.Close()
 	}
@@ -262,17 +261,17 @@ func (u *LocalMultipartUpload) Complete(parts []utils.UploadedPart) (utils.FileO
 	if err := os.WriteFile(finalMetaPath, []byte(finalMetaData), 0644); err != nil {
 		finalFile.Close()
 		os.Remove(finalDataPath)
-		return utils.FileObject{}, fmt.Errorf("failed to write final meta: %v", err)
+		return types.FileObject{}, fmt.Errorf("failed to write final meta: %v", err)
 	}
 
 	os.RemoveAll(u.uploadDir)
 
 	finalData, err := os.ReadFile(finalDataPath)
 	if err != nil {
-		return utils.FileObject{}, fmt.Errorf("failed to read final data: %v", err)
+		return types.FileObject{}, fmt.Errorf("failed to read final data: %v", err)
 	}
 
-	return utils.FileObject{
+	return types.FileObject{
 		Key:  u.key,
 		Body: io.NopCloser(bytes.NewReader(finalData)),
 		ETag: finalETag,

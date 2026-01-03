@@ -3,7 +3,7 @@ package model
 import (
 	"time"
 
-	"github.com/Shua-github/Tap-Cloud-Server/core/utils"
+	"github.com/Shua-github/Tap-Cloud-Server/core/types"
 )
 
 type Session struct {
@@ -16,7 +16,7 @@ type Session struct {
 	UpdatedAt    time.Time
 }
 
-func (s Session) ToUser() (user utils.User) {
+func (s Session) ToEventUser() (user types.EventUser) {
 	user.OpenID = s.OpenID
 	user.SessionToken = s.SessionToken
 	user.Nickname = s.Nickname

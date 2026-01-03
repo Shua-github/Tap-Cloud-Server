@@ -1,18 +1,18 @@
-package utils
+package types
 
-type Meta struct {
+type EventMeta struct {
 	Type   string `json:"type"`
 	Action string `json:"action"`
 }
 
-type User struct {
+type EventUser struct {
 	OpenID       string `json:"openid"`
 	SessionToken string `json:"session_token"`
 	Nickname     string `json:"nickname"`
 }
 
 type Event struct {
-	Meta Meta `json:"meta"`
-	User User `json:"user"`
-	Data any  `json:"data"`
+	Meta EventMeta `json:"meta"`
+	User EventUser `json:"user"`
+	Data any       `json:"data"`
 }

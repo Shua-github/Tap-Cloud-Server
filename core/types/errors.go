@@ -11,14 +11,12 @@ const (
 	DbNotFound
 	// 签名
 	BadSign
-	// 白名单
-	WhitelistNotFound
 )
 
 type TCSError struct {
 	HTTPCode int    `json:"code"`
 	TCSCode  Code   `json:"_code,omitempty"`
-	Message  string `json:"message,omitempty"`
+	Message  string `json:"error,omitempty"`
 }
 
 // 默认 HTTP 错误

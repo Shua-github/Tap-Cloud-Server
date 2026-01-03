@@ -7,15 +7,14 @@ import (
 	"github.com/Shua-github/Tap-Cloud-Server/core/routes/file"
 	"github.com/Shua-github/Tap-Cloud-Server/core/routes/game"
 	"github.com/Shua-github/Tap-Cloud-Server/core/routes/user"
-	"github.com/Shua-github/Tap-Cloud-Server/core/utils"
+	"github.com/Shua-github/Tap-Cloud-Server/core/types"
 )
 
 type Handler struct {
 	Bucket        string
-	NewDb         utils.NewDb
-	NewFileBucket utils.NewFileBucket
-	I18nText      *utils.I18nText
-	Custom        *utils.Custom
+	NewDb         types.NewDb
+	NewFileBucket types.NewFileBucket
+	Custom        *types.Custom
 }
 
 func (h *Handler) New() (mux *http.ServeMux) {
@@ -24,7 +23,7 @@ func (h *Handler) New() (mux *http.ServeMux) {
 	fb := h.NewFileBucket(h.Bucket)
 	model.Init(db)
 	file.RegisterRoutes(mux, db, h.Bucket, fb)
-	user.RegisterRoutes(mux, db, h.Custom, h.I18nText, fb)
+	user.RegisterRoutes(mux, db, h.Custom, fb)
 	game.RegisterRoutes(mux, db, h.Custom)
 
 	return

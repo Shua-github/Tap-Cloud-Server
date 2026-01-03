@@ -6,9 +6,10 @@ import (
 
 	"github.com/Shua-github/Tap-Cloud-Server/core/model"
 	"github.com/Shua-github/Tap-Cloud-Server/core/utils"
+	"gorm.io/gorm"
 )
 
-func GetSession(r *http.Request, db *utils.Db) (*model.Session, error) {
+func GetSession(r *http.Request, db *gorm.DB) (*model.Session, error) {
 	tk := utils.GetSessionToken(r)
 	if tk == "" {
 		return nil, errors.New("invalid request(tk)")

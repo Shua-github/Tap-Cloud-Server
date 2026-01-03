@@ -1,4 +1,4 @@
-package utils
+package types
 
 import "io"
 
@@ -23,7 +23,7 @@ type FileBucket interface {
 	Get(key string) (*FileObject, error)
 	Delete(key string) error
 
-	CreateMultipartUpload(ikey string) (okey string, uploadID string, err error)
+	CreateMultipartUpload(key string) (uploadID string, err error)
 	GetMultipartUpload(key string, uploadID string) (MultipartUpload, error)
 }
 

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/Shua-github/Tap-Cloud-Server/core/general"
+	"github.com/Shua-github/Tap-Cloud-Server/core/types"
 	"github.com/Shua-github/Tap-Cloud-Server/core/utils"
 	"gorm.io/gorm"
 )
@@ -43,7 +44,7 @@ func (f FileToken) MarshalJSON() ([]byte, error) {
 	})
 }
 
-func (f *FileToken) Delete(db *gorm.DB, fb utils.FileBucket) error {
+func (f *FileToken) Delete(db *gorm.DB, fb types.FileBucket) error {
 	if err := fb.Delete(f.ObjectID); err != nil {
 		return fmt.Errorf("failed to delete file from bucket: %w", err)
 	}
@@ -55,7 +56,7 @@ func (f *FileToken) Delete(db *gorm.DB, fb utils.FileBucket) error {
 	return nil
 }
 
-func GetFile(db *utils.Db, ObjectID string) (*FileToken, error) {
+func GetFile(db *gorm.DB, ObjectID string) (*FileToken, error) {
 	var ft FileToken
 
 	if err := db.Where("object_id = ?", ObjectID).First(&ft).Error; err != nil {

@@ -5,30 +5,23 @@ import (
 	"net/http"
 
 	"github.com/Shua-github/Tap-Cloud-Server/core"
-	"github.com/Shua-github/Tap-Cloud-Server/core/utils"
+)
+
+const (
+	configPath    = "./config.json"
+	whiteListPath = "./white_list.json"
+	serverAddr    = "0.0.0.0:443"
 )
 
 func main() {
-	cfg, err := LoadConfig("./config.json")
+	cfg, err := LoadConfig(configPath)
 	if err != nil {
-		panic(err)
+		log.Fatalf("load config failed: %v", err)
 	}
 
-	var custom *utils.Custom
-	if cfg.Custom.Switch {
-		clinet := &http.Client{Timeout: cfg.Custom.WebHookTimeOut.ToDuration()}
-		if cfg.Custom.SignKey == "" {
-			panic("config miss Key")
-		}
-		sign := NewSign([]byte(cfg.Custom.SignKey))
-		custom = &utils.Custom{Sign: sign, Client: clinet}
-
-		whiteList, err := loadWhiteList("./white_list.json")
-		if err != nil {
-			panic(err)
-		}
-		custom.WhiteListCheck = whiteListCheck(whiteList)
-		custom.OnEventHandler = sendWebhook(custom.Sign, custom.Client, cfg.Custom.WebHookURL)
+	custom, err := initCustom(cfg)
+	if err != nil {
+		log.Fatalf("init custom failed: %v", err)
 	}
 
 	handler := &core.Handler{
@@ -36,14 +29,17 @@ func main() {
 		NewFileBucket: NewLocalFileBucket,
 		Bucket:        cfg.Bucket,
 		Custom:        custom,
-		I18nText:      &cfg.I18nText,
 	}
 
 	loggedMux := LoggingMiddleware(handler.New())
 
-	serverAddr := "0.0.0.0:443"
-	log.Printf("Server running at https://%s\n", serverAddr)
-	if err := http.ListenAndServeTLS(serverAddr, cfg.Cert, cfg.Key, loggedMux); err != nil {
-		log.Fatalf("Server error: %v", err)
+	log.Printf("Server running at https://%s", serverAddr)
+	if err := http.ListenAndServeTLS(
+		serverAddr,
+		cfg.Cert,
+		cfg.Key,
+		loggedMux,
+	); err != nil {
+		log.Fatalf("server error: %v", err)
 	}
 }

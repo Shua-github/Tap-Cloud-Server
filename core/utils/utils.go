@@ -1,7 +1,6 @@
 package utils
 
 import (
-	"crypto/md5"
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/json"
@@ -12,7 +11,7 @@ import (
 	"github.com/Shua-github/Tap-Cloud-Server/core/types"
 )
 
-func RandomObjectID() string {
+func RandomID() string {
 	const (
 		length  = 25
 		charset = "0123456789abcdefghijklmnopqrstuvwxyz"
@@ -59,8 +58,4 @@ func WriteError(w http.ResponseWriter, err types.TCSError) {
 func ReadJSON(r *http.Request, v any) error {
 	defer r.Body.Close()
 	return json.NewDecoder(r.Body).Decode(v)
-}
-
-func CalculateMD5(data []byte) string {
-	return fmt.Sprintf("%x", md5.Sum(data))
 }

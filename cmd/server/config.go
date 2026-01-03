@@ -2,27 +2,33 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"net/http"
 	"os"
 	"time"
 
-	"github.com/Shua-github/Tap-Cloud-Server/core/utils"
+	"github.com/Shua-github/Tap-Cloud-Server/core/types"
 )
 
 type Config struct {
-	Bucket   string         `json:"bucket"`
-	Domain   string         `json:"domain"`
-	Cert     string         `json:"cert"`
-	Key      string         `json:"key"`
-	I18nText utils.I18nText `json:"i18n_text"`
-	Custom   CustomConfig   `json:"custom"`
+	Bucket string       `json:"bucket"`
+	Domain string       `json:"domain"`
+	Cert   string       `json:"cert"`
+	Key    string       `json:"key"`
+	Custom CustomConfig `json:"custom"`
 }
 
 type CustomConfig struct {
-	Switch         bool     `json:"switch"`
-	SignKey        string   `json:"sign_key"`
-	WebHookURL     string   `json:"webhook_url"`
-	WebHookTimeOut Duration `json:"webhook_timeout"`
+	Switch               bool          `json:"switch"`
+	SignKey              string        `json:"sign_key"`
+	OpenIDNotInWhiteList string        `json:"openid_not_in_white_list"`
+	WebHook              WebHookConfig `json:"webhook"`
+}
+
+type WebHookConfig struct {
+	URL     string   `json:"url"`
+	Timeout Duration `json:"timeout"`
 }
 
 type Duration time.Duration
@@ -64,4 +70,37 @@ func LoadConfig(path string) (*Config, error) {
 
 func (d Duration) ToDuration() time.Duration {
 	return time.Duration(d)
+}
+
+func initCustom(cfg *Config) (*types.Custom, error) {
+	if !cfg.Custom.Switch {
+		return nil, nil
+	}
+
+	if cfg.Custom.SignKey == "" {
+		return nil, errors.New("custom.sign_key is required")
+	}
+
+	client := &http.Client{
+		Timeout: cfg.Custom.WebHook.Timeout.ToDuration(),
+	}
+
+	whiteList, err := loadWhiteList(whiteListPath)
+	if err != nil {
+		return nil, err
+	}
+
+	custom := &types.Custom{
+		UserAccessCheck: newWhiteListCheck(
+			whiteList,
+			cfg.Custom.OpenIDNotInWhiteList,
+		),
+		OnEventHandler: newSendWebhook(
+			[]byte(cfg.Custom.SignKey),
+			client,
+			cfg.Custom.WebHook.URL,
+		),
+	}
+
+	return custom, nil
 }

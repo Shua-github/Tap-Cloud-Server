@@ -3,11 +3,13 @@
   "domain": "example.com",
   "cert": "",
   "key": "",
-  "i18n_text": {"openid_not_in_white_list":"You are not in whitelist!","server_name":"Tap-Cloud-Server"},
   "custom": {
     "switch": false,
     "sign_key": "my-key",
-    "webhook_url":"http://example.com/", 
-    "webhook_timeout": "1s"
+    "openid_not_in_white_list": "You are not in whitelist!",
+    "webhook": {
+      "url": "http://example.com/",
+      "timeout": "1s"
+    }
   }
 }

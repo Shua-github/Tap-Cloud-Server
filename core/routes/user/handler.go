@@ -6,11 +6,12 @@ import (
 	"github.com/Shua-github/Tap-Cloud-Server/core/model"
 	"github.com/Shua-github/Tap-Cloud-Server/core/types"
 	"github.com/Shua-github/Tap-Cloud-Server/core/utils"
+	"gorm.io/gorm"
 )
 
-func RegisterRoutes(mux *http.ServeMux, db *utils.Db, c *utils.Custom, t *utils.I18nText, fb utils.FileBucket) {
+func RegisterRoutes(mux *http.ServeMux, db *gorm.DB, c *types.Custom, fb types.FileBucket) {
 	mux.HandleFunc("POST /1.1/users", func(w http.ResponseWriter, r *http.Request) {
-		handleRegisterUser(c, t, db, w, r)
+		handleRegisterUser(c, db, w, r)
 	})
 	mux.HandleFunc("PUT /1.1/users/{objectID}/refreshSessionToken", func(w http.ResponseWriter, r *http.Request) {
 		handleRefreshSessionToken(c, db, w, r)
@@ -29,7 +30,7 @@ func RegisterRoutes(mux *http.ServeMux, db *utils.Db, c *utils.Custom, t *utils.
 	})
 }
 
-func handleRegisterUser(c *utils.Custom, t *utils.I18nText, db *utils.Db, w http.ResponseWriter, r *http.Request) {
+func handleRegisterUser(c *types.Custom, db *gorm.DB, w http.ResponseWriter, r *http.Request) {
 	var req TapTapRegisterUserRequest
 	if err := utils.ReadJSON(r, &req); err != nil {
 		utils.WriteError(w, types.BadRequestError)
@@ -41,21 +42,19 @@ func handleRegisterUser(c *utils.Custom, t *utils.I18nText, db *utils.Db, w http
 		return
 	}
 
-	if c != nil && !c.WhiteListCheck(req.AuthData.TapTap.OpenID) {
-		utils.WriteError(w, types.TCSError{
-			HTTPCode: http.StatusForbidden,
-			TCSCode:  types.WhitelistNotFound,
-			Message:  t.OpenIDNotInWhiteList,
-		})
-		return
+	if c != nil {
+		if err := c.UserAccessCheck(req.AuthData.TapTap.OpenID); err != nil {
+			utils.WriteError(w, *err)
+			return
+		}
 	}
 
 	var existing model.Session
 	if err := db.First(&existing, "open_id = ?", req.AuthData.TapTap.OpenID).Error; err == nil {
 		if c != nil {
-			c.OnEventHandler(&utils.Event{
-				Meta: utils.Meta{Type: "user", Action: "login"},
-				User: existing.ToUser(),
+			c.OnEventHandler(&types.Event{
+				Meta: types.EventMeta{Type: "user", Action: "login"},
+				User: existing.ToEventUser(),
 			})
 		}
 		utils.WriteJSON(w, http.StatusOK, SessionToResp(&existing))
@@ -63,11 +62,11 @@ func handleRegisterUser(c *utils.Custom, t *utils.I18nText, db *utils.Db, w http
 	}
 
 	session := model.Session{
-		SessionToken: utils.RandomObjectID(),
-		ObjectID:     utils.RandomObjectID(),
+		SessionToken: utils.RandomID(),
+		ObjectID:     utils.RandomID(),
 		Nickname:     req.AuthData.TapTap.Name,
 		OpenID:       req.AuthData.TapTap.OpenID,
-		ShortId:      t.ServerName,
+		ShortId:      "Tap-Cloud-Server",
 	}
 	if err := db.Create(&session).Error; err != nil {
 		utils.ParseDbError(w, err)
@@ -75,16 +74,16 @@ func handleRegisterUser(c *utils.Custom, t *utils.I18nText, db *utils.Db, w http
 	}
 
 	if c != nil {
-		c.OnEventHandler(&utils.Event{
-			Meta: utils.Meta{Type: "user", Action: "create"},
-			User: existing.ToUser(),
+		c.OnEventHandler(&types.Event{
+			Meta: types.EventMeta{Type: "user", Action: "create"},
+			User: existing.ToEventUser(),
 		})
 	}
 
 	utils.WriteJSON(w, http.StatusCreated, SessionToResp(&session))
 }
 
-func handleRefreshSessionToken(c *utils.Custom, db *utils.Db, w http.ResponseWriter, r *http.Request) {
+func handleRefreshSessionToken(c *types.Custom, db *gorm.DB, w http.ResponseWriter, r *http.Request) {
 	objectID := r.PathValue("objectID")
 
 	session, err := GetSession(r, db)
@@ -92,38 +91,37 @@ func handleRefreshSessionToken(c *utils.Custom, db *utils.Db, w http.ResponseWri
 		utils.WriteError(w, types.BadRequestError)
 		return
 	}
-
 	if session.ObjectID != objectID {
 		utils.WriteError(w, types.UnauthorizedError)
 		return
 	}
 
 	oldSession := *session
-	session.SessionToken = utils.RandomObjectID()
+	session.SessionToken = utils.RandomID()
 
 	db.Save(&session)
 
 	if c != nil {
-		c.OnEventHandler(&utils.Event{
-			Meta: utils.Meta{Type: "user", Action: "refresh_session_token"},
-			User: oldSession.ToUser(),
-			Data: session.ToUser(),
+		c.OnEventHandler(&types.Event{
+			Meta: types.EventMeta{Type: "user", Action: "refresh_session_token"},
+			User: oldSession.ToEventUser(),
+			Data: session.ToEventUser(),
 		})
 	}
 
 	utils.WriteJSON(w, http.StatusOK, SessionToResp(session))
 }
 
-func handleDeleteUser(c *utils.Custom, db *utils.Db, fb utils.FileBucket, w http.ResponseWriter, r *http.Request) {
+func handleDeleteUser(c *types.Custom, db *gorm.DB, fb types.FileBucket, w http.ResponseWriter, r *http.Request) {
 	objectID := r.PathValue("objectID")
 
 	session, err := GetSession(r, db)
 	if err != nil {
-		utils.ParseDbError(w, err)
+		utils.WriteError(w, types.BadRequestError)
 		return
 	}
 	if session.ObjectID != objectID {
-		utils.ParseDbError(w, err)
+		utils.WriteError(w, types.UnauthorizedError)
 		return
 	}
 
@@ -131,16 +129,16 @@ func handleDeleteUser(c *utils.Custom, db *utils.Db, fb utils.FileBucket, w http
 	db.Delete(&session)
 
 	if c != nil {
-		c.OnEventHandler(&utils.Event{
-			Meta: utils.Meta{Type: "user", Action: "delete"},
-			User: session.ToUser(),
+		c.OnEventHandler(&types.Event{
+			Meta: types.EventMeta{Type: "user", Action: "delete"},
+			User: session.ToEventUser(),
 		})
 	}
 
 	w.WriteHeader(http.StatusOK)
 }
 
-func handleGetCurrentUser(db *utils.Db, w http.ResponseWriter, r *http.Request) {
+func handleGetCurrentUser(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
 	s, err := GetSession(r, db)
 	if err != nil {
 		utils.ParseDbError(w, err)
@@ -149,7 +147,7 @@ func handleGetCurrentUser(db *utils.Db, w http.ResponseWriter, r *http.Request) 
 	utils.WriteJSON(w, http.StatusOK, SessionToResp(s))
 }
 
-func handleUpdateUser(c *utils.Custom, db *utils.Db, w http.ResponseWriter, r *http.Request) {
+func handleUpdateUser(c *types.Custom, db *gorm.DB, w http.ResponseWriter, r *http.Request) {
 	objectID := r.PathValue("objectID")
 	var req UpdateUserRequest
 	if err := utils.ReadJSON(r, &req); err != nil {
@@ -170,9 +168,9 @@ func handleUpdateUser(c *utils.Custom, db *utils.Db, w http.ResponseWriter, r *h
 	}
 
 	if c != nil {
-		c.OnEventHandler(&utils.Event{
-			Meta: utils.Meta{Type: "user", Action: "update"},
-			User: session.ToUser(),
+		c.OnEventHandler(&types.Event{
+			Meta: types.EventMeta{Type: "user", Action: "update"},
+			User: session.ToEventUser(),
 		})
 
 	}

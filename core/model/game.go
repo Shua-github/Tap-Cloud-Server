@@ -4,7 +4,8 @@ import (
 	"time"
 
 	"github.com/Shua-github/Tap-Cloud-Server/core/general"
-	"github.com/Shua-github/Tap-Cloud-Server/core/utils"
+	"github.com/Shua-github/Tap-Cloud-Server/core/types"
+	"gorm.io/gorm"
 )
 
 type GameSave struct {
@@ -18,7 +19,7 @@ type GameSave struct {
 	UpdatedAt        time.Time
 }
 
-func DeleteAllGameSaves(db *utils.Db, fb utils.FileBucket, user_object_id string) error {
+func DeleteAllGameSaves(db *gorm.DB, fb types.FileBucket, user_object_id string) error {
 	var saves []GameSave
 
 	if err := db.

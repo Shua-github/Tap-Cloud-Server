@@ -4,9 +4,10 @@ import (
 	"github.com/Shua-github/Tap-Cloud-Server/core/general"
 	"github.com/Shua-github/Tap-Cloud-Server/core/model"
 	"github.com/Shua-github/Tap-Cloud-Server/core/utils"
+	"gorm.io/gorm"
 )
 
-func ToCore(g model.GameSave, db *utils.Db, user_object_id string) (*GameSaveCore, error) {
+func ToCore(g model.GameSave, db *gorm.DB, user_object_id string) (*GameSaveCore, error) {
 	ft, err := model.GetFile(db, g.GameFileObjectID)
 
 	if err != nil {
