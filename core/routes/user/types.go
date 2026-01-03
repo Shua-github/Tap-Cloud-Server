@@ -1,8 +1,9 @@
 package user
 
+import "github.com/Shua-github/Tap-Cloud-Server/core/types"
+
 type TapTap struct {
-	OpenID string `json:"openid"`
-	Name   string `json:"name"`
+	types.ProFileInfo
 	Kid    string `json:"kid"`
 	MacKey string `json:"mac_key"`
 }

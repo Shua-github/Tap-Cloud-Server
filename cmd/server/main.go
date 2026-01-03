@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/Shua-github/Tap-Cloud-Server/core"
+	"github.com/Shua-github/Tap-Cloud-Server/core/types"
 )
 
 const (
@@ -24,11 +25,21 @@ func main() {
 		log.Fatalf("init custom failed: %v", err)
 	}
 
+	var tapCheck *types.TapCheck
+	if cfg.TapCheck.Switch {
+		tapCheck = &types.TapCheck{
+			BaseURL:  cfg.TapCheck.BaseURL,
+			Client:   http.DefaultClient,
+			ClientID: cfg.TapCheck.ClientID,
+		}
+	}
+
 	handler := &core.Handler{
 		NewDb:         mustNewDb,
 		NewFileBucket: NewLocalFileBucket,
 		Bucket:        cfg.Bucket,
 		Custom:        custom,
+		TapCheck:      tapCheck,
 	}
 
 	loggedMux := LoggingMiddleware(handler.New())

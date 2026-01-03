@@ -15,6 +15,7 @@ type Handler struct {
 	NewDb         types.NewDb
 	NewFileBucket types.NewFileBucket
 	Custom        *types.Custom
+	TapCheck      *types.TapCheck
 }
 
 func (h *Handler) New() (mux *http.ServeMux) {
@@ -23,7 +24,7 @@ func (h *Handler) New() (mux *http.ServeMux) {
 	fb := h.NewFileBucket(h.Bucket)
 	model.Init(db)
 	file.RegisterRoutes(mux, db, h.Bucket, fb)
-	user.RegisterRoutes(mux, db, h.Custom, fb)
+	user.RegisterRoutes(mux, db, h.Custom, fb, h.TapCheck)
 	game.RegisterRoutes(mux, db, h.Custom)
 
 	return

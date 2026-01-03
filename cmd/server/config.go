@@ -12,11 +12,12 @@ import (
 )
 
 type Config struct {
-	Bucket string       `json:"bucket"`
-	Domain string       `json:"domain"`
-	Cert   string       `json:"cert"`
-	Key    string       `json:"key"`
-	Custom CustomConfig `json:"custom"`
+	Bucket   string         `json:"bucket"`
+	Domain   string         `json:"domain"`
+	Cert     string         `json:"cert"`
+	Key      string         `json:"key"`
+	Custom   CustomConfig   `json:"custom"`
+	TapCheck TapCheckConfig `json:"tap_check"`
 }
 
 type CustomConfig struct {
@@ -29,6 +30,12 @@ type CustomConfig struct {
 type WebHookConfig struct {
 	URL     string   `json:"url"`
 	Timeout Duration `json:"timeout"`
+}
+
+type TapCheckConfig struct {
+	Switch   bool   `json:"switch"`
+	BaseURL  string `json:"base_url"` // open.tapapis.cn or open.tapapis.com
+	ClientID string `json:"client_id"`
 }
 
 type Duration time.Duration

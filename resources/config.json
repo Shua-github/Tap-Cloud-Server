@@ -11,5 +11,10 @@
       "url": "http://example.com/",
       "timeout": "1s"
     }
+  },
+  "tap_check": {
+    "switch": false,
+    "base_url": "open.tapapis.cn",
+    "client_id": "my-bucket-tap"
   }
 }

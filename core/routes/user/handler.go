@@ -9,9 +9,9 @@ import (
 	"gorm.io/gorm"
 )
 
-func RegisterRoutes(mux *http.ServeMux, db *gorm.DB, c *types.Custom, fb types.FileBucket) {
+func RegisterRoutes(mux *http.ServeMux, db *gorm.DB, c *types.Custom, fb types.FileBucket, t *types.TapCheck) {
 	mux.HandleFunc("POST /1.1/users", func(w http.ResponseWriter, r *http.Request) {
-		handleRegisterUser(c, db, w, r)
+		handleRegisterUser(c, db, w, r, t)
 	})
 	mux.HandleFunc("PUT /1.1/users/{objectID}/refreshSessionToken", func(w http.ResponseWriter, r *http.Request) {
 		handleRefreshSessionToken(c, db, w, r)
@@ -30,7 +30,7 @@ func RegisterRoutes(mux *http.ServeMux, db *gorm.DB, c *types.Custom, fb types.F
 	})
 }
 
-func handleRegisterUser(c *types.Custom, db *gorm.DB, w http.ResponseWriter, r *http.Request) {
+func handleRegisterUser(c *types.Custom, db *gorm.DB, w http.ResponseWriter, r *http.Request, t *types.TapCheck) {
 	var req TapTapRegisterUserRequest
 	if err := utils.ReadJSON(r, &req); err != nil {
 		utils.WriteError(w, types.BadRequestError)
@@ -40,6 +40,15 @@ func handleRegisterUser(c *types.Custom, db *gorm.DB, w http.ResponseWriter, r *
 	if req.AuthData.TapTap.OpenID == "" {
 		utils.WriteError(w, types.BadRequestError)
 		return
+	}
+
+	if t != nil {
+		if profile, err := t.GetProFileInfo(req.AuthData.TapTap.Kid, req.AuthData.TapTap.MacKey); err == nil {
+			req.AuthData.TapTap.ProFileInfo = *profile
+		} else {
+			utils.WriteError(w, types.TCSError{HTTPCode: http.StatusBadRequest, Message: err.Error()})
+			return
+		}
 	}
 
 	if c != nil {
