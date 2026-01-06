@@ -4,7 +4,8 @@ import (
 	"crypto/hmac"
 	"crypto/sha1"
 	"encoding/base64"
-	"encoding/json"
+	"encoding/json/jsontext"
+	"encoding/json/v2"
 	"fmt"
 	"io"
 	"math/rand"
@@ -29,8 +30,8 @@ func (e *TapError) Error() string {
 }
 
 type TapResponse struct {
-	Data json.RawMessage `json:"data"`
-	OK   bool            `json:"success"`
+	Data jsontext.Value `json:"data"`
+	OK   bool           `json:"success"`
 }
 
 type TapCheck struct {

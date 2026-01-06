@@ -1,19 +1,17 @@
 package model
 
 import (
-	"time"
-
+	"github.com/Shua-github/Tap-Cloud-Server/core/general"
 	"github.com/Shua-github/Tap-Cloud-Server/core/types"
 )
 
 type Session struct {
-	ObjectID     string `gorm:"primarykey"`
-	Nickname     string
-	OpenID       string
-	SessionToken string `gorm:"index"`
-	ShortId      string
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
+	ObjectID     string `gorm:"primarykey" json:"objectId"`
+	Nickname     string `json:"nickname"`
+	OpenID       string `gorm:"uniqueIndex" json:"-"`
+	SessionToken string `gorm:"uniqueIndex" json:"sessionToken"`
+	ShortId      string `json:"shortId"`
+	general.BaseDate
 }
 
 func (s Session) ToEventUser() (user types.EventUser) {

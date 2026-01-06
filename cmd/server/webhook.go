@@ -2,7 +2,7 @@ package main
 
 import (
 	"bytes"
-	"encoding/json"
+	"encoding/json/v2"
 	"io"
 	"net/http"
 	"os"
@@ -19,7 +19,7 @@ func loadWhiteList(path string) ([]string, error) {
 	defer file.Close()
 
 	var list []string
-	if err := json.NewDecoder(file).Decode(&list); err != nil {
+	if err := json.UnmarshalRead(file, &list); err != nil {
 		return nil, err
 	}
 	return list, nil

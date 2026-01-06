@@ -54,9 +54,8 @@ func handleCreateGameSave(c *types.Custom, db *gorm.DB, w http.ResponseWriter, r
 	}
 
 	utils.WriteJSON(w, http.StatusCreated, CreateGameSaveResponse{
-		ObjectID:  game_save.ObjectID,
-		CreatedAt: utils.FormatUTCISO(game_save.CreatedAt),
-		UpdatedAt: utils.FormatUTCISO(game_save.UpdatedAt),
+		ObjectID: game_save.ObjectID,
+		BaseDate: game_save.BaseDate,
 	})
 }
 
@@ -103,8 +102,7 @@ func handleGetGameSaves(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
 			ObjectID:   gs.ObjectID,
 			User:       general.Pointer{ClassName: "_User", ObjectID: session.ObjectID},
 			ModifiedAt: gs.ModifiedAt,
-			CreatedAt:  utils.FormatUTCISO(gs.CreatedAt),
-			UpdatedAt:  utils.FormatUTCISO(gs.UpdatedAt),
+			BaseDate:   gs.BaseDate,
 		}
 		resp.Results = append(resp.Results, *data)
 	}
@@ -149,5 +147,5 @@ func handleUpdateGameSave(c *types.Custom, db *gorm.DB, w http.ResponseWriter, r
 		})
 	}
 
-	utils.WriteJSON(w, http.StatusOK, UpdateGameSaveResponse{UpdatedAt: utils.FormatUTCISO(game_save.UpdatedAt)})
+	utils.WriteJSON(w, http.StatusOK, UpdateGameSaveResponse{game_save.BaseDate})
 }

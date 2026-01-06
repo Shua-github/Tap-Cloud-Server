@@ -1,46 +1,40 @@
 package model
 
 import (
-	"encoding/json"
+	"encoding/json/v2"
 	"fmt"
-	"time"
 
 	"github.com/Shua-github/Tap-Cloud-Server/core/general"
 	"github.com/Shua-github/Tap-Cloud-Server/core/types"
-	"github.com/Shua-github/Tap-Cloud-Server/core/utils"
 	"gorm.io/gorm"
 )
 
 type FileToken struct {
-	Bucket    string           `json:"bucket"`
-	Key       string           `json:"key"`
-	MetaData  general.MetaData `gorm:"embedded;embeddedPrefix:meta_" json:"metaData"`
-	Name      string           `json:"name"`
-	ObjectID  string           `json:"objectId" gorm:"primarykey"`
-	Token     string           `json:"token"`
-	ACL       general.ACL      `gorm:"serializer:json" json:"ACL"`
-	CreatedAt time.Time        `json:"-"`
-	UpdatedAt time.Time        `json:"-"`
-	UploadURL string           `json:"upload_url" gorm:"-"`
-	FileURL   string           `json:"url" gorm:"-"`
+	Key      string           `json:"key" gorm:"uniqueIndex"`
+	MetaData general.MetaData `gorm:"embedded;embeddedPrefix:meta_" json:"metaData"`
+	Name     string           `json:"name"`
+	ObjectID string           `json:"objectId" gorm:"primarykey"`
+	Token    string           `json:"token"`
+	ACL      general.ACL      `gorm:"serializer:json" json:"ACL"`
+
+	Bucket    string `json:"bucket" gorm:"-"`
+	UploadURL string `json:"upload_url,omitempty" gorm:"-"`
+	FileURL   string `json:"url,omitempty" gorm:"-"`
+	general.BaseDate
 }
 
 func (f FileToken) MarshalJSON() ([]byte, error) {
 	type Alias FileToken
 	return json.Marshal(&struct {
-		Type      string `json:"__type"`
-		CreatedAt string `json:"createdAt"`
-		UpdatedAt string `json:"updatedAt"`
-		MimeType  string `json:"mime_type"`
-		Provider  string `json:"provider"`
+		Type     string `json:"__type"`
+		MimeType string `json:"mime_type"`
+		Provider string `json:"provider"`
 		Alias
 	}{
-		Type:      "File",
-		CreatedAt: utils.FormatUTCISO(f.CreatedAt),
-		UpdatedAt: utils.FormatUTCISO(f.UpdatedAt),
-		Provider:  "qiniu",
-		MimeType:  "application/octet-stream",
-		Alias:     (Alias)(f),
+		Type:     "File",
+		Provider: "qiniu",
+		MimeType: "application/octet-stream",
+		Alias:    (Alias)(f),
 	})
 }
 

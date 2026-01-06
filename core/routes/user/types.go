@@ -1,6 +1,9 @@
 package user
 
-import "github.com/Shua-github/Tap-Cloud-Server/core/types"
+import (
+	"github.com/Shua-github/Tap-Cloud-Server/core/general"
+	"github.com/Shua-github/Tap-Cloud-Server/core/types"
+)
 
 type TapTap struct {
 	types.ProFileInfo
@@ -30,8 +33,7 @@ type GetCurrentUserResponse struct {
 type SessionResponse struct {
 	SessionToken string `json:"sessionToken"`
 	ObjectID     string `json:"objectId"`
-	CreatedAt    string `json:"createdAt"`
-	UpdatedAt    string `json:"updatedAt"`
 	Nickname     string `json:"nickname"`
 	ShortId      string `json:"shortId"`
+	general.BaseDate
 }

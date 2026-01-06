@@ -23,7 +23,10 @@ func mustNewDb(name string) (db *gorm.DB) {
 		panic(err)
 	}
 	path := filepath.Join(dir, name+".db")
-	db, err := gorm.Open(sqlite.Open(path), &gorm.Config{})
+	db, err := gorm.Open(sqlite.Open(path), &gorm.Config{
+		NowFunc: func() time.Time {
+			return time.Now().UTC()
+		}})
 	if err != nil {
 		panic(err)
 	}

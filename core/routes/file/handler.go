@@ -63,7 +63,6 @@ func handleCreateFileToken(db *gorm.DB, bucket string, w http.ResponseWriter, r 
 		return
 	}
 
-	w.WriteHeader(http.StatusCreated)
 	utils.WriteJSON(w, http.StatusOK, ft)
 }
 

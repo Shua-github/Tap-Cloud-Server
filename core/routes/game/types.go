@@ -14,9 +14,8 @@ type GameSaveRequest struct {
 }
 
 type CreateGameSaveResponse struct {
-	ObjectID  string `json:"objectId"`
-	CreatedAt string `json:"createdAt"`
-	UpdatedAt string `json:"updatedAt"`
+	ObjectID string `json:"objectId"`
+	general.BaseDate
 }
 
 type GetGameSavesResponse struct {
@@ -24,7 +23,7 @@ type GetGameSavesResponse struct {
 }
 
 type UpdateGameSaveResponse struct {
-	UpdatedAt string `json:"updatedAt"`
+	general.BaseDate
 }
 
 type GameSaveCore struct {
@@ -32,10 +31,9 @@ type GameSaveCore struct {
 	GameFile   model.FileToken `json:"gameFile"`
 	User       general.Pointer `json:"user"`
 	ModifiedAt general.Date    `json:"modifiedAt"`
-	CreatedAt  string          `json:"createdAt"`
-	UpdatedAt  string          `json:"updatedAt"`
 	Name       string          `json:"name"`
 	ObjectID   string          `json:"objectId"`
+	general.BaseDate
 }
 
 type GameSaveResponse struct {

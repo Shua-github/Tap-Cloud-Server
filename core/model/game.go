@@ -1,8 +1,6 @@
 package model
 
 import (
-	"time"
-
 	"github.com/Shua-github/Tap-Cloud-Server/core/general"
 	"github.com/Shua-github/Tap-Cloud-Server/core/types"
 	"gorm.io/gorm"
@@ -12,11 +10,10 @@ type GameSave struct {
 	Summary          string
 	GameFileObjectID string       `gorm:"index"`
 	ObjectID         string       `gorm:"primarykey"`
-	ModifiedAt       general.Date `gorm:"embedded"`
+	ModifiedAt       general.Date `gorm:"embedded;embeddedPrefix:modified_"`
 	Name             string
 	UserObjectID     string `gorm:"index"`
-	CreatedAt        time.Time
-	UpdatedAt        time.Time
+	general.BaseDate
 }
 
 func DeleteAllGameSaves(db *gorm.DB, fb types.FileBucket, user_object_id string) error {

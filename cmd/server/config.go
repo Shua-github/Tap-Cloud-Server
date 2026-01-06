@@ -1,7 +1,7 @@
 package main
 
 import (
-	"encoding/json"
+	"encoding/json/v2"
 	"errors"
 	"fmt"
 	"net/http"
@@ -61,7 +61,7 @@ func LoadConfig(path string) (*Config, error) {
 	defer file.Close()
 
 	cfg := &Config{}
-	if err := json.NewDecoder(file).Decode(cfg); err != nil {
+	if err := json.UnmarshalRead(file, cfg); err != nil {
 		return nil, err
 	}
 

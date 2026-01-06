@@ -3,10 +3,10 @@ package utils
 import (
 	"crypto/rand"
 	"encoding/base64"
-	"encoding/json"
+	"encoding/json/v2"
 	"fmt"
 	"net/http"
-	"time"
+	"runtime"
 
 	"github.com/Shua-github/Tap-Cloud-Server/core/types"
 )
@@ -23,10 +23,6 @@ func RandomID() string {
 		b[i] = charset[randomByte[0]%byte(len(charset))]
 	}
 	return string(b)
-}
-
-func FormatUTCISO(i time.Time) string {
-	return i.UTC().Format(time.RFC3339Nano)
 }
 
 func EncodeBase64Key(key string) string {
@@ -46,9 +42,15 @@ func GetSessionToken(r *http.Request) string {
 }
 
 func WriteJSON(w http.ResponseWriter, statusCode int, data any) {
+	pc, file, line, ok := runtime.Caller(1)
+	if ok {
+		fn := runtime.FuncForPC(pc)
+		fmt.Printf("Called by %s @ %s:%d\n", fn.Name(), file, line)
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
-	json.NewEncoder(w).Encode(data)
+	json.MarshalWrite(w, data)
 }
 
 func WriteError(w http.ResponseWriter, err types.TCSError) {
@@ -57,5 +59,5 @@ func WriteError(w http.ResponseWriter, err types.TCSError) {
 
 func ReadJSON(r *http.Request, v any) error {
 	defer r.Body.Close()
-	return json.NewDecoder(r.Body).Decode(v)
+	return json.UnmarshalRead(r.Body, v)
 }

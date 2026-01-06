@@ -37,16 +37,20 @@ func handleRegisterUser(c *types.Custom, db *gorm.DB, w http.ResponseWriter, r *
 		return
 	}
 
-	if req.AuthData.TapTap.OpenID == "" {
-		utils.WriteError(w, types.BadRequestError)
-		return
-	}
-
 	if t != nil {
+		if req.AuthData.TapTap.MacKey == "" || req.AuthData.TapTap.Kid == "" {
+			utils.WriteError(w, types.BadRequestError)
+			return
+		}
 		if profile, err := t.GetProFileInfo(req.AuthData.TapTap.Kid, req.AuthData.TapTap.MacKey); err == nil {
 			req.AuthData.TapTap.ProFileInfo = *profile
 		} else {
 			utils.WriteError(w, types.TCSError{HTTPCode: http.StatusBadRequest, Message: err.Error()})
+			return
+		}
+	} else {
+		if req.AuthData.TapTap.OpenID == "" || req.AuthData.TapTap.Name == "" {
+			utils.WriteError(w, types.BadRequestError)
 			return
 		}
 	}
@@ -66,7 +70,7 @@ func handleRegisterUser(c *types.Custom, db *gorm.DB, w http.ResponseWriter, r *
 				User: existing.ToEventUser(),
 			})
 		}
-		utils.WriteJSON(w, http.StatusOK, SessionToResp(&existing))
+		utils.WriteJSON(w, http.StatusOK, &existing)
 		return
 	}
 
@@ -89,7 +93,7 @@ func handleRegisterUser(c *types.Custom, db *gorm.DB, w http.ResponseWriter, r *
 		})
 	}
 
-	utils.WriteJSON(w, http.StatusCreated, SessionToResp(&session))
+	utils.WriteJSON(w, http.StatusCreated, &session)
 }
 
 func handleRefreshSessionToken(c *types.Custom, db *gorm.DB, w http.ResponseWriter, r *http.Request) {
@@ -118,7 +122,7 @@ func handleRefreshSessionToken(c *types.Custom, db *gorm.DB, w http.ResponseWrit
 		})
 	}
 
-	utils.WriteJSON(w, http.StatusOK, SessionToResp(session))
+	utils.WriteJSON(w, http.StatusOK, session)
 }
 
 func handleDeleteUser(c *types.Custom, db *gorm.DB, fb types.FileBucket, w http.ResponseWriter, r *http.Request) {
@@ -144,7 +148,7 @@ func handleDeleteUser(c *types.Custom, db *gorm.DB, fb types.FileBucket, w http.
 		})
 	}
 
-	w.WriteHeader(http.StatusOK)
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func handleGetCurrentUser(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
@@ -153,7 +157,7 @@ func handleGetCurrentUser(db *gorm.DB, w http.ResponseWriter, r *http.Request) {
 		utils.ParseDbError(w, err)
 		return
 	}
-	utils.WriteJSON(w, http.StatusOK, SessionToResp(s))
+	utils.WriteJSON(w, http.StatusOK, s)
 }
 
 func handleUpdateUser(c *types.Custom, db *gorm.DB, w http.ResponseWriter, r *http.Request) {
@@ -184,5 +188,5 @@ func handleUpdateUser(c *types.Custom, db *gorm.DB, w http.ResponseWriter, r *ht
 
 	}
 
-	utils.WriteJSON(w, http.StatusOK, SessionToResp(&session))
+	utils.WriteJSON(w, http.StatusOK, &session)
 }

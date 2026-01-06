@@ -23,13 +23,3 @@ func GetSession(r *http.Request, db *gorm.DB) (*model.Session, error) {
 
 	return session, nil
 }
-
-func SessionToResp(s *model.Session) (resp SessionResponse) {
-	resp.SessionToken = s.SessionToken
-	resp.ObjectID = s.ObjectID
-	resp.ShortId = s.ShortId
-	resp.Nickname = s.Nickname
-	resp.CreatedAt = utils.FormatUTCISO(s.CreatedAt)
-	resp.UpdatedAt = utils.FormatUTCISO(s.UpdatedAt)
-	return
-}

@@ -1,7 +1,8 @@
 package general
 
 import (
-	"encoding/json"
+	"encoding/json/v2"
+	"time"
 )
 
 type Pointer struct {
@@ -20,13 +21,13 @@ func (p Pointer) MarshalJSON() ([]byte, error) {
 }
 
 type Date struct {
-	Data string `json:"iso"`
+	Date string `json:"iso"`
 }
 
 func (d Date) MarshalJSON() ([]byte, error) {
 	m := map[string]string{
 		"__type": "Date",
-		"iso":    d.Data,
+		"iso":    d.Date,
 	}
 	return json.Marshal(m)
 }
@@ -38,3 +39,8 @@ type MetaData struct {
 }
 
 type ACL map[string]map[string]bool
+
+type BaseDate struct {
+	CreatedAt time.Time `json:"createdAt,format:RFC3339Nano"`
+	UpdatedAt time.Time `json:"updatedAt,format:RFC3339Nano"`
+}
