@@ -6,7 +6,6 @@ import (
 	"encoding/json/v2"
 	"fmt"
 	"net/http"
-	"runtime"
 
 	"github.com/Shua-github/Tap-Cloud-Server/core/types"
 )
@@ -42,12 +41,6 @@ func GetSessionToken(r *http.Request) string {
 }
 
 func WriteJSON(w http.ResponseWriter, statusCode int, data any) {
-	pc, file, line, ok := runtime.Caller(1)
-	if ok {
-		fn := runtime.FuncForPC(pc)
-		fmt.Printf("Called by %s @ %s:%d\n", fn.Name(), file, line)
-	}
-
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
 	json.MarshalWrite(w, data)
